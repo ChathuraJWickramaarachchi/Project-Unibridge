@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment System Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        input {
+            margin: 10px 5px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>💳 Payment System Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Payment Processing</h2>
+        <p>Test the payment API endpoints:</p>
+        
+        <div>
+            <label>Auth Token: </label>
+            <input type="text" id="authToken" placeholder="Enter JWT token" size="50">
+        </div>
+        
+        <button onclick="testPaymentProcessing()">🧪 Test Payment Processing</button>
+        <button onclick="testGetPayments()">📋 Get User Payments</button>
+        <button onclick="testPaymentStats()">📊 Get Payment Stats (Admin)</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Complete Payment Flow</h2>
+        <ol>
+            <li><strong>Build CV:</strong> <a href="/cv-builder" target="_blank">Go to CV Builder</a></li>
+            <li><strong>Fill Form:</strong> Complete all CV fields</li>
+            <li><strong>Preview:</strong> Review your CV</li>
+            <li><strong>Download:</strong> Click "Download CV" button</li>
+            <li><strong>Payment:</strong> Complete payment form</li>
+            <li><strong>Success:</strong> CV downloaded automatically</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>🗄️ Database Schema</h2>
+        <p><strong>Payment Collection:</strong></p>
+        <pre>
+{
+  userId: ObjectId,
+  cvData: {
+    fullName: String,
+    email: String,
+    phone: String,
+    address: String,
+    education: String,
+    skills: String,
+    experience: String,
+    careerObjective: String
+  },
+  paymentDetails: {
+    amount: Number (9.99),
+    currency: String ("USD"),
+    paymentMethod: String ("card"|"paypal"),
+    transactionId: String (unique),
+    paymentStatus: String ("pending"|"processing"|"completed"|"failed"),
+    cardLastFour: String,
+    paymentProvider: String ("stripe")
+  },
+  downloadInfo: {
+    downloadCount: Number,
+    lastDownloadedAt: Date,
+    downloadUrl: String
+  },
+  createdAt: Date,
+  updatedAt: Date
+}
+        </pre>
+    </div>
+
+    <script>
+        async function testPaymentProcessing() {
+            const token = document.getElementById('authToken').value;
+            
+            if (!token) {
+                document.getElementById('result').innerHTML = 
+                    `<div class="result error">Please enter an auth token</div>`;
+                return;
+            }
+            
+            const paymentData = {
+                cvData: {
+                    fullName: "Test User",
+                    email: "test@example.com",
+                    phone: "+1234567890",
+                    address: "123 Test Street, Test City",
+                    education: "Bachelor's in Computer Science",
+                    skills: "JavaScript, React, Node.js",
+                    experience: "2 years at Tech Company",
+                    careerObjective: "To become a senior developer"
+                },
+                paymentMethod: "card",
+                cardNumber: "4242424242424242",
+                nameOnCard: "Test User",
+                expiryDate: "12/25",
+                cvv: "123",
+                amount: 9.99
+            };
+            
+            try {
+                const response = await fetch('/api/payments/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(paymentData)
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = 
+                    `<div class="result ${result.success ? 'success' : 'error'}">
+                        <strong>Payment Processing Response:</strong><br>
+                        ${JSON.stringify(result, null, 2)}
+                    </div>`;
+                    
+                if (result.success) {
+                    // Store payment ID for download test
+                    localStorage.setItem('testPaymentId', result.data.paymentId);
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<div class="result error">
+                        <strong>Error:</strong><br>
+                        ${error.message}
+                    </div>`;
+            }
+        }
+        
+        async function testGetPayments() {
+            const token = document.getElementById('authToken').value;
+            
+            if (!token) {
+                document.getElementById('result').innerHTML = 
+                    `<div class="result error">Please enter an auth token</div>`;
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/payments', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = 
+                    `<div class="result ${result.success ? 'success' : 'error'}">
+                        <strong>Get Payments Response:</strong><br>
+                        ${JSON.stringify(result, null, 2)}
+                    </div>`;
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<div class="result error">
+                        <strong>Error:</strong><br>
+                        ${error.message}
+                    </div>`;
+            }
+        }
+        
+        async function testPaymentStats() {
+            const token = document.getElementById('authToken').value;
+            
+            if (!token) {
+                document.getElementById('result').innerHTML = 
+                    `<div class="result error">Please enter an auth token</div>`;
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/payments/stats/all', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = 
+                    `<div class="result ${result.success ? 'success' : 'error'}">
+                        <strong>Payment Stats Response:</strong><br>
+                        ${JSON.stringify(result, null, 2)}
+                    </div>`;
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<div class="result error">
+                        <strong>Error:</strong><br>
+                        ${error.message}
+                    </div>`;
+            }
+        }
+    </script>
+</body>
+</html>
