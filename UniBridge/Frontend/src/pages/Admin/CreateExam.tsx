@@ -47,7 +47,7 @@ const CreateExam = () => {
         passingScore: parseInt(formData.passingScore)
       };
 
-      const response = await examService.createExam(payload);
+      const response = await examService.createAdminExam(payload);
 
       if (response.success) {
         toast({
