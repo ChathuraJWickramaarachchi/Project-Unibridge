@@ -1,0 +1,9 @@
+@echo off
+echo Starting Backend Server...
+echo.
+echo Checking Node.js installation...
+node --version
+echo.
+echo Starting server...
+node server.js
+pause

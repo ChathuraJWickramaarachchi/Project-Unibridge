@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin API Test</title>
+</head>
+<body>
+    <h1>Admin API Test</h1>
+    <button onclick="testAPI()">Test Admin API</button>
+    <div id="results"></div>
+
+    <script>
+        async function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing...</p>';
+
+            try {
+                // 1. Test health endpoint
+                const healthResponse = await fetch('/api/health');
+                const healthData = await healthResponse.json();
+                console.log('Health check:', healthData);
+
+                // 2. Create admin user
+                const adminData = {
+                    firstName: 'Admin',
+                    lastName: 'Test',
+                    email: 'admin@test.com',
+                    password: 'admin123',
+                    role: 'admin',
+                    phone: '1234567890',
+                    address: '123 Test St'
+                };
+
+                const registerResponse = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(adminData),
+                });
+                const registerData = await registerResponse.json();
+                console.log('Register:', registerData);
+
+                // 3. Login
+                const loginResponse = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@test.com',
+                        password: 'admin123'
+                    }),
+                });
+                const loginData = await loginResponse.json();
+                console.log('Login:', loginData);
+
+                if (loginData.success && loginData.token) {
+                    const token = loginData.token;
+                    
+                    // 4. Test exam creation
+                    const examData = {
+                        title: 'Test Exam from Frontend',
+                        description: 'Testing exam creation from frontend',
+                        timeLimit: 30,
+                        passingScore: 50
+                    };
+
+                    const examResponse = await fetch('/api/admin/exams', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(examData),
+                    });
+                    const examResult = await examResponse.json();
+                    console.log('Exam creation:', examResult);
+
+                    // 5. Get all exams
+                    const examsResponse = await fetch('/api/admin/exams', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                        },
+                    });
+                    const examsResult = await examsResponse.json();
+                    console.log('Get exams:', examsResult);
+
+                    resultsDiv.innerHTML = `
+                        <h3>Results:</h3>
+                        <pre>${JSON.stringify({
+                            health: healthData,
+                            register: registerData,
+                            login: loginData,
+                            examCreation: examResult,
+                            getExams: examsResult
+                        }, null, 2)}</pre>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
