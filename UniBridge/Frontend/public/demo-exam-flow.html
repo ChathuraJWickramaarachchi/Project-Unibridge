@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Flow Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .step h3 {
+            color: #007bff;
+            margin-top: 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎓 Complete Exam Flow Demonstration</h1>
+    
+    <div class="step">
+        <h3>Step 1: Student Takes Exam</h3>
+        <p>Student goes to exam list and starts an exam:</p>
+        <button onclick="window.open('/exam-list', '_blank')">📝 Open Exam List</button>
+        <button onclick="window.open('/exam/69be41d51986aed1e3061dd8', '_blank')">🚀 Start Sample Exam</button>
+    </div>
+
+    <div class="step">
+        <h3>Step 2: Complete Exam</h3>
+        <p>Student answers questions and submits exam:</p>
+        <ul>
+            <li>Answer all questions (or leave some unanswered)</li>
+            <li>Click "Submit Exam" when done</li>
+            <li>Enter email when prompted</li>
+            <li>View results immediately</li>
+            <li>Click "Go to Home" to return</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h3>Step 3: Admin Views Results</h3>
+        <p>Admin can view all submitted results:</p>
+        <button onclick="window.open('/admin/exams/results', '_blank')">📊 View Results Dashboard</button>
+        <div id="admin-login">
+            <p><strong>Admin Login:</strong> admin@unibridge.com / admin123</p>
+        </div>
+    </div>
+
+    <div class="step">
+        <h3>Step 4: Test Results Submission</h3>
+        <p>Test the API directly:</p>
+        <input type="email" id="testEmail" value="test@example.com" placeholder="Enter email">
+        <input type="text" id="testAnswers" value="0,1" placeholder="Answers (comma-separated)">
+        <button onclick="testSubmit()">🧪 Submit Test Results</button>
+        <div id="testResult"></div>
+    </div>
+
+    <div class="step">
+        <h3>📋 Complete Flow Summary</h3>
+        <ol>
+            <li><strong>Student Access:</strong> Visit /exam-list → Choose exam → Start exam</li>
+            <li><strong>Exam Taking:</strong> Answer questions → Submit exam → Enter email</li>
+            <li><strong>Results Saved:</strong> Automatic calculation → Database storage</li>
+            <li><strong>Admin Viewing:</strong> Login → /admin/exams/results → View statistics</li>
+            <li><strong>Data Persistence:</strong> Results stored in ApplicantExam collection</li>
+        </ol>
+    </div>
+
+    <script>
+        async function testSubmit() {
+            const email = document.getElementById('testEmail').value;
+            const answers = document.getElementById('testAnswers').value.split(',').map(a => parseInt(a.trim()));
+            const examId = '69be41d51986aed1e3061dd8';
+            
+            const data = {
+                applicantEmail: email,
+                answers: answers,
+                duration: 25
+            };
+            
+            try {
+                const response = await fetch(`/api/exams/public/${examId}/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                const resultDiv = document.getElementById('testResult');
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            ✅ Results submitted successfully!<br>
+                            Score: ${result.data.score}/${result.data.totalMarks}<br>
+                            Percentage: ${result.data.percentage}%<br>
+                            Status: ${result.data.passFail}<br>
+                            Exam: ${result.data.examTitle}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result">
+                            ❌ Error: ${result.message}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('testResult').innerHTML = `
+                    <div class="result">
+                        ❌ Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
