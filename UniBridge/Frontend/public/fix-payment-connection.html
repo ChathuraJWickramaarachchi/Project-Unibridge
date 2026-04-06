@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Payment Connection Error</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .fix-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .step {
+            background: #e9ecef;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Fix Payment Connection Error</h1>
+    
+    <div class="error">
+        <h2>❌ Current Error: ECONNREFUSED</h2>
+        <p><strong>Issue:</strong> Vite frontend cannot connect to backend server at localhost:5001</p>
+        <p><strong>Cause:</strong> Backend server is not running</p>
+    </div>
+
+    <div class="fix-section">
+        <h2>🚀 Quick Fix - Start Backend Server</h2>
+        
+        <div class="step">
+            <h3>Step 1: Open Terminal/Command Prompt</h3>
+            <p>Navigate to the Backend directory:</p>
+            <div class="code-block">cd "c:\Users\Tumal\OneDrive\Desktop\Chathura\UniBridge\UniBridge\Backend"</div>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Start the Server</h3>
+            <p>Run one of these commands:</p>
+            <div class="code-block">
+Option 1: npm start
+Option 2: node server.js
+Option 3: npm run dev (for development with auto-restart)
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Verify Server is Running</h3>
+            <p>You should see output like:</p>
+            <div class="code-block">
+Server running on port 5001
+✅ Database initialization complete
+Loading routes...
+Routes loaded successfully
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>Step 4: Test Connection</h3>
+            <button onclick="testConnection()">🔍 Test Backend Connection</button>
+            <div id="connectionResult"></div>
+        </div>
+    </div>
+
+    <div class="fix-section">
+        <h2>🛠️ Alternative Solutions</h2>
+        
+        <h3>If Server Won't Start:</h3>
+        
+        <div class="warning">
+            <h4>1. Check Node.js Installation</h4>
+            <div class="code-block">node --version</div>
+            <p>If not installed, download from: https://nodejs.org/</p>
+        </div>
+
+        <div class="warning">
+            <h4>2. Check Dependencies</h4>
+            <div class="code-block">npm install</div>
+            <p>This will install all required packages</p>
+        </div>
+
+        <div class="warning">
+            <h4>3. Check Environment Variables</h4>
+            <p>Make sure .env file exists with proper configuration:</p>
+            <div class="code-block">
+PORT=5001
+MONGODB_URI=mongodb://localhost:27017/unibridge
+JWT_SECRET=your-secret-key
+            </div>
+        </div>
+
+        <div class="warning">
+            <h4>4. Check MongoDB Connection</h4>
+            <div class="code-block">mongosh</div>
+            <p>If MongoDB is not running, start MongoDB service</p>
+        </div>
+    </div>
+
+    <div class="fix-section">
+        <h2>🔍 Troubleshooting Steps</h2>
+        
+        <ol>
+            <li><strong>Verify Backend Port:</strong> Make sure port 5001 is not blocked</li>
+            <li><strong>Check Firewall:</strong> Allow Node.js/localhost connections</li>
+            <li><strong>Restart Everything:</strong> Stop both frontend and backend, then restart backend first</li>
+            <li><strong>Clear Cache:</strong> Clear browser cache and restart frontend</li>
+            <li><strong>Check Logs:</strong> Look at backend console for specific error messages</li>
+        </ol>
+    </div>
+
+    <div class="fix-section">
+        <h2>✅ Expected Working State</h2>
+        
+        <div class="success">
+            <h3>When Everything Works:</h3>
+            <ul>
+                <li>✅ Backend server running on localhost:5001</li>
+                <li>✅ No more ECONNREFUSED errors</li>
+                <li>✅ Payment processing works</li>
+                <li>✅ CV download works</li>
+                <li>✅ Database operations work</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="fix-section">
+        <h2>🚀 Quick Start Script</h2>
+        <p>I've created a batch file to make starting easier:</p>
+        <div class="code-block">
+Double-click: Backend/start-server.bat
+        </div>
+        <p>This will automatically start the backend server with proper error handling.</p>
+    </div>
+
+    <script>
+        async function testConnection() {
+            try {
+                const response = await fetch('http://localhost:5001/api/health');
+                const result = await response.json();
+                
+                document.getElementById('connectionResult').innerHTML = 
+                    `<div class="success">
+                        ✅ Backend Connection Successful!<br>
+                        Server Response: ${JSON.stringify(result, null, 2)}
+                    </div>`;
+            } catch (error) {
+                document.getElementById('connectionResult').innerHTML = 
+                    `<div class="error">
+                        ❌ Backend Connection Failed<br>
+                        Error: ${error.message}<br>
+                        <strong>Solution:</strong> Start the backend server first!
+                    </div>`;
+            }
+        }
+
+        // Auto-test on page load
+        window.onload = function() {
+            testConnection();
+        };
+    </script>
+</body>
+</html>
