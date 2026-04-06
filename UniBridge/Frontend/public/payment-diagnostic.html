@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment System Diagnostic</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .diagnostic-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-online {
+            background: #28a745;
+        }
+        .status-offline {
+            background: #dc3545;
+        }
+        .status-warning {
+            background: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Payment System Diagnostic Tool</h1>
+    
+    <div class="diagnostic-section">
+        <h2>🌐 Server Connectivity Check</h2>
+        <button onclick="checkServer()">🔍 Check Server Status</button>
+        <button onclick="checkPaymentEndpoint()">💳 Check Payment Endpoint</button>
+        <div id="serverResult"></div>
+    </div>
+
+    <div class="diagnostic-section">
+        <h2>🔑 Authentication Check</h2>
+        <div>
+            <label>Auth Token: </label>
+            <input type="text" id="authToken" placeholder="Enter JWT token" size="50">
+        </div>
+        <button onclick="checkAuth()">🔑 Test Authentication</button>
+        <button onclick="getUserInfo()">👤 Get User Info</button>
+        <div id="authResult"></div>
+    </div>
+
+    <div class="diagnostic-section">
+        <h2>💳 Payment Processing Test</h2>
+        <button onclick="testPayment()">🧪 Test Payment Processing</button>
+        <button onclick="testPaymentWithInvalidData()">❌ Test Invalid Payment</button>
+        <div id="paymentResult"></div>
+    </div>
+
+    <div class="diagnostic-section">
+        <h2>📊 System Status Summary</h2>
+        <div id="statusSummary"></div>
+        <button onclick="runFullDiagnostic()">🏥 Run Full Diagnostic</button>
+    </div>
+
+    <div class="diagnostic-section">
+        <h2>🛠️ Common Issues & Solutions</h2>
+        <div class="info">
+            <h3>If payment fails, check these:</h3>
+            <ol>
+                <li><strong>Backend Server:</strong> Must be running on localhost:5001</li>
+                <li><strong>Authentication:</strong> Valid JWT token required</li>
+                <li><strong>CV Data:</strong> All required fields must be present</li>
+                <li><strong>Payment Details:</strong> Card details must be valid format</li>
+                <li><strong>Database:</strong> MongoDB must be connected</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        let diagnosticResults = {
+            server: false,
+            auth: false,
+            payment: false
+        };
+
+        async function checkServer() {
+            try {
+                const response = await fetch('http://localhost:5001/api/health');
+                const result = await response.json();
+                
+                diagnosticResults.server = true;
+                document.getElementById('serverResult').innerHTML = 
+                    `<div class="result success">
+                        <span class="status-indicator status-online"></span>
+                        <strong>Server Status:</strong> ONLINE ✅<br>
+                        ${JSON.stringify(result, null, 2)}
+                    </div>`;
+            } catch (error) {
+                diagnosticResults.server = false;
+                document.getElementById('serverResult').innerHTML = 
+                    `<div class="result error">
+                        <span class="status-indicator status-offline"></span>
+                        <strong>Server Status:</strong> OFFLINE ❌<br>
+                        <strong>Error:</strong> ${error.message}<br>
+                        <strong>Solution:</strong> Start the backend server:<br>
+                        cd Backend && npm start
+                    </div>`;
+            }
+            updateStatusSummary();
+        }
+
+        async function checkPaymentEndpoint() {
+            try {
+                const response = await fetch('http://localhost:5001/api/payments');
+                const result = await response.json();
+                
+                document.getElementById('serverResult').innerHTML += 
+                    `<div class="result ${result.success ? 'success' : 'error'}">
+                        <strong>Payment Endpoint:</strong> ${result.success ? 'Accessible' : 'Error'}<br>
+                        ${JSON.stringify(result, null, 2)}
+                    </div>`;
+            } catch (error) {
+                document.getElementById('serverResult').innerHTML += 
+                    `<div class="result error">
+                        <strong>Payment Endpoint Error:</strong> ${error.message}
+                    </div>`;
+            }
+        }
+
+        async function checkAuth() {
+            const token = document.getElementById('authToken').value;
+            
+            if (!token) {
+                document.getElementById('authResult').innerHTML = 
+                    `<div class="result warning">
+                        <span class="status-indicator status-warning"></span>
+                        Please enter an auth token
+                    </div>`;
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:5001/api/users/profile', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const result = await response.json();
+                
+                diagnosticResults.auth = result.success;
+                document.getElementById('authResult').innerHTML = 
+                    `<div class="result ${result.success ? 'success' : 'error'}">
+                        <span class="status-indicator ${result.success ? 'status-online' : 'status-offline'}"></span>
+                        <strong>Authentication:</strong> ${result.success ? 'Valid ✅' : 'Invalid ❌'}<br>
+                        ${JSON.stringify(result, null, 2)}
+                    </div>`;
+            } catch (error) {
+                diagnosticResults.auth = false;
+                document.getElementById('authResult').innerHTML = 
+                    `<div class="result error">
+                        <span class="status-indicator status-offline"></span>
+                        <strong>Authentication Error:</strong> ${error.message}
+                    </div>`;
+            }
+            updateStatusSummary();
+        }
+
+        async function getUserInfo() {
+            const token = document.getElementById('authToken').value;
+            
+            try {
+                const response = await fetch('http://localhost:5001/api/users/profile', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const result = await response.json();
+                
+                document.getElementById('authResult').innerHTML += 
+                    `<div class="result ${result.success ? 'success' : 'error'}">
+                        <strong>User Info:</strong><br>
+                        ${JSON.stringify(result, null, 2)}
+                    </div>`;
+            } catch (error) {
+                document.getElementById('authResult').innerHTML += 
+                    `<div class="result error">
+                        <strong>User Info Error:</strong> ${error.message}
+                    </div>`;
+            }
+        }
+
+        async function testPayment() {
+            const token = document.getElementById('authToken').value;
+            
+            if (!token) {
+                document.getElementById('paymentResult').innerHTML = 
+                    `<div class="result warning">Please enter an auth token first</div>`;
+                return;
+            }
+            
+            const paymentData = {
+                cvData: {
+                    fullName: "Test User",
+                    email: "test@example.com",
+                    phone: "+1234567890",
+                    address: "123 Test Street",
+                    education: "Bachelor's in Computer Science",
+                    skills: "JavaScript, React, Node.js",
+                    experience: "2 years experience"
+                },
+                paymentMethod: "card",
+                cardNumber: "4242424242424242",
+                nameOnCard: "Test User",
+                expiryDate: "12/25",
+                cvv: "123",
+                amount: 9.99
+            };
+            
+            try {
+                const response = await fetch('http://localhost:5001/api/payments/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(paymentData)
+                });
+                
+                const result = await response.json();
+                diagnosticResults.payment = result.success;
+                
+                document.getElementById('paymentResult').innerHTML = 
+                    `<div class="result ${result.success ? 'success' : 'error'}">
+                        <span class="status-indicator ${result.success ? 'status-online' : 'status-offline'}"></span>
+                        <strong>Payment Processing:</strong> ${result.success ? 'Success ✅' : 'Failed ❌'}<br>
+                        ${JSON.stringify(result, null, 2)}
+                    </div>`;
+            } catch (error) {
+                diagnosticResults.payment = false;
+                document.getElementById('paymentResult').innerHTML = 
+                    `<div class="result error">
+                        <span class="status-indicator status-offline"></span>
+                        <strong>Payment Processing Error:</strong> ${error.message}
+                    </div>`;
+            }
+            updateStatusSummary();
+        }
+
+        async function testPaymentWithInvalidData() {
+            const token = document.getElementById('authToken').value;
+            
+            try {
+                const response = await fetch('http://localhost:5001/api/payments/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        cvData: { fullName: "Test" }, // Missing required fields
+                        paymentMethod: "card"
+                    })
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('paymentResult').innerHTML += 
+                    `<div class="result ${result.success ? 'error' : 'success'}">
+                        <strong>Invalid Data Test:</strong> ${result.success ? 'Unexpected Success' : 'Expected Failure ✅'}<br>
+                        ${JSON.stringify(result, null, 2)}
+                    </div>`;
+            } catch (error) {
+                document.getElementById('paymentResult').innerHTML += 
+                    `<div class="result error">
+                        <strong>Invalid Data Test Error:</strong> ${error.message}
+                    </div>`;
+            }
+        }
+
+        function updateStatusSummary() {
+            const serverStatus = diagnosticResults.server;
+            const authStatus = diagnosticResults.auth;
+            const paymentStatus = diagnosticResults.payment;
+            
+            let statusHTML = '<h3>System Status:</h3><ul>';
+            statusHTML += `<li><span class="status-indicator ${serverStatus ? 'status-online' : 'status-offline'}"></span>Backend Server: ${serverStatus ? 'Online' : 'Offline'}</li>`;
+            statusHTML += `<li><span class="status-indicator ${authStatus ? 'status-online' : 'status-offline'}"></span>Authentication: ${authStatus ? 'Working' : 'Failed'}</li>`;
+            statusHTML += `<li><span class="status-indicator ${paymentStatus ? 'status-online' : 'status-offline'}"></span>Payment Processing: ${paymentStatus ? 'Working' : 'Failed'}</li>`;
+            statusHTML += '</ul>';
+            
+            if (serverStatus && authStatus && paymentStatus) {
+                statusHTML += '<div class="result success">✅ All systems operational!</div>';
+            } else {
+                statusHTML += '<div class="result error">❌ Some systems need attention</div>';
+            }
+            
+            document.getElementById('statusSummary').innerHTML = statusHTML;
+        }
+
+        async function runFullDiagnostic() {
+            await checkServer();
+            await checkPaymentEndpoint();
+            await checkAuth();
+            await testPayment();
+        }
+
+        // Auto-check server on load
+        window.onload = function() {
+            checkServer();
+        };
+    </script>
+</body>
+</html>
