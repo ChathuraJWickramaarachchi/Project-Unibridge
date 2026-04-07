@@ -19,7 +19,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['application', 'status_update', 'general'],
+      enum: ['application', 'status_update', 'exam', 'general'],
       default: 'general',
     },
     relatedId: {

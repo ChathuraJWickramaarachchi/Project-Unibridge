@@ -1,5 +1,6 @@
 const Job = require('../models/Job');
 const Department = require('../models/Department');
+const mongoose = require('mongoose');
 
 const MAX_JOBS_PER_TYPE = 10;
 
@@ -82,8 +83,11 @@ exports.getJobs = async (req, res) => {
 
     let query = {};
     
-    if (companyId && req.user.role === 'company_manager') {
-      query.companyId = companyId;
+    // Filter by companyId for employers (company managers)
+    if (companyId && (req.user.role === 'employer' || req.user.role === 'admin')) {
+      if (req.user.role === 'employer') {
+        query.companyId = companyId;
+      }
     }
 
     if (department) {
@@ -280,7 +284,7 @@ exports.getJobStats = async (req, res) => {
     const companyId = req.user.id;
 
     const stats = await Job.aggregate([
-      { $match: { companyId: new require('mongoose').Types.ObjectId(companyId) } },
+      { $match: { companyId: new mongoose.Types.ObjectId(companyId) } },
       {
         $group: {
           _id: '$type',
@@ -302,7 +306,7 @@ exports.getJobStats = async (req, res) => {
     ]);
 
     const totalApplicants = await Job.aggregate([
-      { $match: { companyId: new require('mongoose').Types.ObjectId(companyId) } },
+      { $match: { companyId: new mongoose.Types.ObjectId(companyId) } },
       {
         $group: {
           _id: null,

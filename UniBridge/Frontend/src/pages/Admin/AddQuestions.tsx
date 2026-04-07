@@ -39,7 +39,7 @@ const AddQuestions = () => {
   const loadExams = async () => {
     try {
       setExamsLoading(true);
-      const response = await examService.getAllExams();
+      const response = await examService.getAllAdminExams();
       if (response.success) {
         setExams(response.data);
       }

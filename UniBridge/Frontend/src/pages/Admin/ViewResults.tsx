@@ -36,7 +36,7 @@ const ViewResults = () => {
   const loadExams = async () => {
     try {
       setLoading(true);
-      const response = await examService.getAllExams();
+      const response = await examService.getAllAdminExams();
       if (response.success) {
         setExams(response.data);
       }

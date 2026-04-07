@@ -1,5 +1,6 @@
 const Department = require('../models/Department');
 const Job = require('../models/Job');
+const mongoose = require('mongoose');
 
 const departmentIcons = {
   'IT': 'Monitor',
@@ -58,9 +59,6 @@ exports.getDepartments = async (req, res) => {
     const companyId = req.user.id;
     
     const departments = await Department.find({ companyId })
-      .populate('internshipCount')
-      .populate('jobCount')
-      .populate('totalPositions')
       .sort({ createdAt: -1 });
 
     const departmentsWithCounts = await Promise.all(
@@ -190,7 +188,7 @@ exports.getDepartmentStats = async (req, res) => {
     const companyId = req.user.id;
 
     const stats = await Department.aggregate([
-      { $match: { companyId: new require('mongoose').Types.ObjectId(companyId) } },
+      { $match: { companyId: new mongoose.Types.ObjectId(companyId) } },
       {
         $lookup: {
           from: 'jobs',

@@ -297,32 +297,6 @@ class ExamService {
     }
   }
 
-  // ==================== CONVENIENCE ALIASES FOR ADMIN COMPONENTS ====================
-
-  // Alias for admin exam creation
-  async createExam(examData) {
-    return this.createAdminExam(examData);
-  }
-
-  // Alias for getting all exams (admin)
-  async getAllExams() {
-    return this.getAllAdminExams();
-  }
-
-  // Alias for getting exam by ID (admin)
-  async getExamById(examId) {
-    return this.getAdminExamById(examId);
-  }
-
-  // Alias for updating exam (admin)
-  async updateExam(examId, examData) {
-    return this.updateAdminExam(examId, examData);
-  }
-
-  // Alias for deleting exam (admin)
-  async deleteExam(examId) {
-    return this.deleteAdminExam(examId);
-  }
 }
 
 export default new ExamService();
