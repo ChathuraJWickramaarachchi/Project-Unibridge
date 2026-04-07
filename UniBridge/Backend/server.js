@@ -15,9 +15,10 @@ connectDB()
     console.log('✅ Database initialization complete');
   })
   .catch(err => {
-    console.error('❌ Server startup failed due to database connection error');
-    console.error('Please fix the database connection and restart the server');
-    process.exit(1);
+    console.error('❌ Database connection failed, but server will continue for testing');
+    console.error('⚠️  API endpoints requiring database will return errors');
+    console.error('🔧 Fix database connection for full functionality');
+    // Don't exit process - allow server to run for testing
   });
 
 const app = express();

@@ -38,7 +38,8 @@ const connectDB = async () => {
     
     console.error('\n⚠️  Proceeding without database connection.');
     console.error('   API endpoints requiring database will fail.');
-    throw error; // Re-throw to prevent server from starting with broken DB
+    // Don't throw error - allow server to continue for testing
+    // throw error;
   }
 };
 
