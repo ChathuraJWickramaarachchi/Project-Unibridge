@@ -1,11 +1,11 @@
-const Exam = require('../models/Exam');
-const Job = require('../models/Job');
-const User = require('../models/User');
+import Exam from '../models/Exam.js';
+import Job from '../models/Job.js';
+import User from '../models/User.js';
 
 // @desc    Create a new exam schedule
 // @route   POST /api/exams
 // @access  Private (Company only)
-exports.createExam = async (req, res) => {
+const createExam = async (req, res) => {
   try {
     console.log('=== CREATE EXAM REQUEST ===');
     console.log('Request body:', req.body);
@@ -138,7 +138,7 @@ exports.createExam = async (req, res) => {
 // @desc    Get all exams for a company
 // @route   GET /api/exams/company/:companyId
 // @access  Private (Company only)
-exports.getCompanyExams = async (req, res) => {
+const getCompanyExams = async (req, res) => {
   try {
     const { companyId } = req.params;
 
@@ -173,7 +173,7 @@ exports.getCompanyExams = async (req, res) => {
 // @desc    Get exams for a student
 // @route   GET /api/exams/student/:studentId
 // @access  Private
-exports.getStudentExams = async (req, res) => {
+const getStudentExams = async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -208,7 +208,7 @@ exports.getStudentExams = async (req, res) => {
 // @desc    Update an exam
 // @route   PUT /api/exams/:id
 // @access  Private (Company only)
-exports.updateExam = async (req, res) => {
+const updateExam = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -269,7 +269,7 @@ exports.updateExam = async (req, res) => {
 // @desc    Delete an exam
 // @route   DELETE /api/exams/:id
 // @access  Private (Company only)
-exports.deleteExam = async (req, res) => {
+const deleteExam = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -309,7 +309,7 @@ exports.deleteExam = async (req, res) => {
 // @desc    Get single exam by ID
 // @route   GET /api/exams/:id
 // @access  Private
-exports.getExamById = async (req, res) => {
+const getExamById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -350,4 +350,13 @@ exports.getExamById = async (req, res) => {
       error: error.message 
     });
   }
+};
+
+export {
+  createExam,
+  getCompanyExams,
+  getStudentExams,
+  updateExam,
+  deleteExam,
+  getExamById
 };

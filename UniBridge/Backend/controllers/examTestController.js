@@ -1,10 +1,10 @@
-const ExamTest = require('../models/ExamTest');
-const Question = require('../models/Question');
+import ExamTest from '../models/ExamTest.js';
+import Question from '../models/Question.js';
 
 // @desc    Create a new exam
 // @route   POST /api/admin/exams
 // @access  Private/Admin
-exports.createExam = async (req, res) => {
+const createExam = async (req, res) => {
   try {
     const { title, description, timeLimit, passingScore } = req.body;
 
@@ -38,12 +38,12 @@ exports.createExam = async (req, res) => {
   }
 };
 
-const ApplicantExam = require('../models/ApplicantExam');
+import ApplicantExam from '../models/ApplicantExam.js';
 
 // @desc    Submit exam results (public)
 // @route   POST /api/exams/public/:id/submit
 // @access  Public
-exports.submitExamResults = async (req, res) => {
+const submitExamResults = async (req, res) => {
   try {
     const { applicantEmail, answers, duration } = req.body;
     const examId = req.params.id;
@@ -130,7 +130,7 @@ exports.submitExamResults = async (req, res) => {
 // @desc    Get all exam results (admin)
 // @route   GET /api/admin/results
 // @access  Private/Admin
-exports.getAllResults = async (req, res) => {
+const getAllResults = async (req, res) => {
   try {
     const results = await ApplicantExam.find()
       .populate('examId', 'title description')
@@ -169,7 +169,7 @@ exports.getAllResults = async (req, res) => {
 // @desc    Get results by exam ID (admin)
 // @route   GET /api/admin/results/:examId
 // @access  Private/Admin
-exports.getResultsByExam = async (req, res) => {
+const getResultsByExam = async (req, res) => {
   try {
     const results = await ApplicantExam.find({ examId: req.params.examId })
       .populate('examId', 'title description')
@@ -208,7 +208,7 @@ exports.getResultsByExam = async (req, res) => {
 // @desc    Get results statistics (admin)
 // @route   GET /api/admin/results/stats
 // @access  Private/Admin
-exports.getResultsStatistics = async (req, res) => {
+const getResultsStatistics = async (req, res) => {
   try {
     const results = await ApplicantExam.find({ status: 'evaluated' });
     
@@ -250,7 +250,7 @@ exports.getResultsStatistics = async (req, res) => {
 // @desc    Get all exams (public)
 // @route   GET /api/exams/public
 // @access  Public
-exports.getAllPublicExams = async (req, res) => {
+const getAllPublicExams = async (req, res) => {
   try {
     const exams = await ExamTest.find({ status: 'active' })
       .sort({ createdAt: -1 })
@@ -276,7 +276,7 @@ exports.getAllPublicExams = async (req, res) => {
 // @desc    Get exam by ID (public)
 // @route   GET /api/exams/public/:id
 // @access  Public
-exports.getPublicExamById = async (req, res) => {
+const getPublicExamById = async (req, res) => {
   try {
     const exam = await ExamTest.findById(req.params.id);
     
@@ -310,7 +310,7 @@ exports.getPublicExamById = async (req, res) => {
 // @desc    Get questions by exam ID (public)
 // @route   GET /api/exams/public/:id/questions
 // @access  Public
-exports.getPublicQuestionsByExam = async (req, res) => {
+const getPublicQuestionsByExam = async (req, res) => {
   try {
     const exam = await ExamTest.findById(req.params.id);
     
@@ -348,7 +348,7 @@ exports.getPublicQuestionsByExam = async (req, res) => {
 // @desc    Get all exams
 // @route   GET /api/admin/exams
 // @access  Private/Admin
-exports.getAllExams = async (req, res) => {
+const getAllExams = async (req, res) => {
   try {
     const exams = await ExamTest.find().sort({ createdAt: -1 });
 
@@ -380,7 +380,7 @@ exports.getAllExams = async (req, res) => {
 // @desc    Get exam by ID
 // @route   GET /api/admin/exams/:id
 // @access  Private/Admin
-exports.getExamById = async (req, res) => {
+const getExamById = async (req, res) => {
   try {
     const exam = await ExamTest.findById(req.params.id);
 
@@ -412,7 +412,7 @@ exports.getExamById = async (req, res) => {
 // @desc    Update exam
 // @route   PUT /api/admin/exams/:id
 // @access  Private/Admin
-exports.updateExam = async (req, res) => {
+const updateExam = async (req, res) => {
   try {
     const { title, description, timeLimit, passingScore, status } = req.body;
 
@@ -451,7 +451,7 @@ exports.updateExam = async (req, res) => {
 // @desc    Delete exam
 // @route   DELETE /api/admin/exams/:id
 // @access  Private/Admin
-exports.deleteExam = async (req, res) => {
+const deleteExam = async (req, res) => {
   try {
     const exam = await ExamTest.findByIdAndDelete(req.params.id);
 
@@ -482,7 +482,7 @@ exports.deleteExam = async (req, res) => {
 // @desc    Generate SEB configuration for exam
 // @route   GET /api/exams/:id/seb-config
 // @access  Public (but requires authentication for security)
-exports.generateSEBConfig = async (req, res) => {
+const generateSEBConfig = async (req, res) => {
   try {
     const { id: examId } = req.params;
 
@@ -584,3 +584,19 @@ function generateSEBXML(config) {
   <examKey>${config.examKey}</examKey>
 </SEBConfig>`;
 }
+
+export {
+  createExam,
+  submitExamResults,
+  getAllResults,
+  getResultsByExam,
+  getResultsStatistics,
+  getAllPublicExams,
+  getPublicExamById,
+  getPublicQuestionsByExam,
+  getAllExams,
+  getExamById,
+  updateExam,
+  deleteExam,
+  generateSEBConfig
+};

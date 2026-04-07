@@ -1,7 +1,7 @@
-const express = require('express');
-const { register, login, getMe, changePassword, forgotPassword, resetPassword, verifyOTP } = require('../controllers/authController');
-const { passport, googleCallback } = require('../controllers/googleAuthController');
-const { protect } = require('../middleware/auth');
+import express from 'express';
+import { register, login, getMe, changePassword, forgotPassword, resetPassword, verifyOTP } from '../controllers/authController.js';
+import { passport, googleCallback } from '../controllers/googleAuthController.js';
+import { protect } from '../middleware/auth.js';
 
 console.log('Loading auth routes...');
 console.log('Forgot password function:', typeof forgotPassword);
@@ -28,4 +28,4 @@ router.get('/google/callback',
 
 console.log('Auth routes loaded successfully');
 
-module.exports = router;
+export default router;

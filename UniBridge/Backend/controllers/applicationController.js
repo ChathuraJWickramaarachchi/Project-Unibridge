@@ -1,10 +1,10 @@
-const Application = require('../models/Application');
-const Notification = require('../models/Notification');
-const Job = require('../models/Job');
-const path = require('path');
+import Application from '../models/Application.js';
+import Notification from '../models/Notification.js';
+import Job from '../models/Job.js';
+import path from 'path';
 
 // POST /api/applications
-exports.submitApplication = async (req, res) => {
+const submitApplication = async (req, res) => {
   try {
     const { jobId, fullName, email, contactNumber, university, coverLetter } = req.body;
     const studentId = req.user.id;
@@ -85,7 +85,7 @@ exports.submitApplication = async (req, res) => {
 };
 
 // GET /api/applications/student/:id
-exports.getStudentApplications = async (req, res) => {
+const getStudentApplications = async (req, res) => {
   try {
     const studentId = req.params.id;
 
@@ -106,7 +106,7 @@ exports.getStudentApplications = async (req, res) => {
 };
 
 // GET /api/applications/my  (logged-in student)
-exports.getMyApplications = async (req, res) => {
+const getMyApplications = async (req, res) => {
   try {
     const studentId = req.user.id;
 
@@ -122,7 +122,7 @@ exports.getMyApplications = async (req, res) => {
 };
 
 // GET /api/applications/job/:jobId  (employer/admin only)
-exports.getJobApplications = async (req, res) => {
+const getJobApplications = async (req, res) => {
   try {
     const applications = await Application.find({ jobId: req.params.jobId })
       .populate('studentId', 'firstName lastName email profile')
@@ -136,7 +136,7 @@ exports.getJobApplications = async (req, res) => {
 };
 
 // PUT /api/applications/:id/status  (employer/admin only)
-exports.updateApplicationStatus = async (req, res) => {
+const updateApplicationStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const validStatuses = ['Pending', 'Shortlisted', 'Rejected', 'Accepted'];
@@ -176,4 +176,12 @@ exports.updateApplicationStatus = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error updating status', error: error.message });
   }
+};
+
+export {
+  submitApplication,
+  getStudentApplications,
+  getMyApplications,
+  getJobApplications,
+  updateApplicationStatus,
 };

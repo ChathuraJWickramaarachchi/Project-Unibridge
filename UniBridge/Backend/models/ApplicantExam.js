@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const applicantExamSchema = new mongoose.Schema(
   {
@@ -77,4 +77,4 @@ const applicantExamSchema = new mongoose.Schema(
 // Index for faster queries
 applicantExamSchema.index({ examId: 1, applicantEmail: 1 });
 
-module.exports = mongoose.model('ApplicantExam', applicantExamSchema);
+export default mongoose.model('ApplicantExam', applicantExamSchema);

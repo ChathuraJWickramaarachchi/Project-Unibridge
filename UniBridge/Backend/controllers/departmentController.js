@@ -1,5 +1,5 @@
-const Department = require('../models/Department');
-const Job = require('../models/Job');
+import Department from '../models/Department.js';
+import Job from '../models/Job.js';
 
 const departmentIcons = {
   'IT': 'Monitor',
@@ -17,7 +17,7 @@ const departmentColors = {
   'Networking': '#8B5CF6'
 };
 
-exports.createDepartment = async (req, res) => {
+const createDepartment = async (req, res) => {
   try {
     const { name, description } = req.body;
     const companyId = req.user.id;
@@ -53,7 +53,7 @@ exports.createDepartment = async (req, res) => {
   }
 };
 
-exports.getDepartments = async (req, res) => {
+const getDepartments = async (req, res) => {
   try {
     const companyId = req.user.id;
     
@@ -97,7 +97,7 @@ exports.getDepartments = async (req, res) => {
   }
 };
 
-exports.getAllDepartments = async (req, res) => {
+const getAllDepartments = async (req, res) => {
   try {
     const departments = await Department.find({ isActive: true })
       .select('name icon color')
@@ -117,7 +117,7 @@ exports.getAllDepartments = async (req, res) => {
   }
 };
 
-exports.updateDepartment = async (req, res) => {
+const updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
     const { description, isActive } = req.body;
@@ -150,7 +150,7 @@ exports.updateDepartment = async (req, res) => {
   }
 };
 
-exports.deleteDepartment = async (req, res) => {
+const deleteDepartment = async (req, res) => {
   try {
     const { id } = req.params;
     const companyId = req.user.id;
@@ -185,7 +185,7 @@ exports.deleteDepartment = async (req, res) => {
   }
 };
 
-exports.getDepartmentStats = async (req, res) => {
+const getDepartmentStats = async (req, res) => {
   try {
     const companyId = req.user.id;
 
@@ -236,4 +236,13 @@ exports.getDepartmentStats = async (req, res) => {
       error: error.message
     });
   }
+};
+
+export {
+  createDepartment,
+  getDepartments,
+  getAllDepartments,
+  updateDepartment,
+  deleteDepartment,
+  getDepartmentStats
 };

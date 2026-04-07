@@ -1,21 +1,22 @@
-const express = require('express');
-const router = express.Router();
-const { 
+import express from 'express';
+import { 
   createExam, 
   getCompanyExams, 
   getStudentExams, 
   updateExam, 
   deleteExam,
   getExamById
-} = require('../controllers/examController');
-const {
+} from '../controllers/examController.js';
+import {
   getAllPublicExams,
   getPublicExamById,
   getPublicQuestionsByExam,
   submitExamResults,
   generateSEBConfig
-} = require('../controllers/examTestController');
-const { protect } = require('../middleware/auth');
+} from '../controllers/examTestController.js';
+import { protect } from '../middleware/auth.js';
+
+const router = express.Router();
 
 // Public routes (no authentication required)
 // @route   GET /api/exams/public
@@ -65,4 +66,4 @@ router.put('/:id', updateExam);
 // @desc    Delete exam (Company only)
 router.delete('/:id', deleteExam);
 
-module.exports = router;
+export default router;

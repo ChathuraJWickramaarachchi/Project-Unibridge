@@ -1,7 +1,7 @@
-const User = require('../models/User');
-const { generateToken } = require('../config/jwt');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
+import User from '../models/User.js';
+import { generateToken } from '../config/jwt.js';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 // In production, you would use nodemailer or similar service
 // For now, we'll log the verification link to console
 
@@ -343,7 +343,7 @@ const verifyOTP = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   register,
   login,
   getMe,
