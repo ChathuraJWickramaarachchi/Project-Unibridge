@@ -15,6 +15,7 @@ import Feedback from "./pages/Feedback";
 import Companies from "./pages/Companies";
 import Exam from "./pages/Exam";
 import ExamList from "./pages/ExamList";
+import DownloadSEB from "./pages/DownloadSEB";
 import CVBuilder from "./pages/CVBuilder";
 import Payment from "./pages/Payment";
 import Auth from "./pages/Auth";
@@ -91,6 +92,7 @@ const App = () => {
               <Route path="/companies" element={<ProtectedRoute><Layout><Companies /></Layout></ProtectedRoute>} />
               <Route path="/exams" element={<ProtectedRoute><StudentExamSchedule /></ProtectedRoute>} />
               <Route path="/exam-list" element={<ProtectedRoute><Layout><ExamList /></Layout></ProtectedRoute>} />
+              <Route path="/download-seb/:examId" element={<ProtectedRoute><Layout><DownloadSEB /></Layout></ProtectedRoute>} />
               <Route path="/exam/:examId" element={<ProtectedRoute><Layout><Exam /></Layout></ProtectedRoute>} />
               <Route path="/cv-builder" element={<ProtectedRoute><Layout><CVBuilder /></Layout></ProtectedRoute>} />
               <Route path="/payment" element={<ProtectedRoute><Layout><Payment /></Layout></ProtectedRoute>} />

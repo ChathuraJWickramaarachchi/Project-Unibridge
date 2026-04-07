@@ -478,3 +478,109 @@ exports.deleteExam = async (req, res) => {
     });
   }
 };
+
+// @desc    Generate SEB configuration for exam
+// @route   GET /api/exams/:id/seb-config
+// @access  Public (but requires authentication for security)
+exports.generateSEBConfig = async (req, res) => {
+  try {
+    const { id: examId } = req.params;
+
+    // Verify exam exists and is active
+    const exam = await ExamTest.findById(examId);
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        message: 'Exam not found'
+      });
+    }
+
+    if (exam.status !== 'active') {
+      return res.status(404).json({
+        success: false,
+        message: 'Exam not available'
+      });
+    }
+
+    // Get frontend URL from environment or default
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    // Generate unique exam session key
+    const examSessionKey = generateExamSessionKey(examId);
+
+    // Create SEB configuration
+    const sebConfig = {
+      startURL: `${frontendUrl}/exam/${examId}?lockdown=true&session=${examSessionKey}`,
+      browserViewMode: 1, // Fullscreen mode
+      showTaskBar: false,
+      showReloadButton: false,
+      showTime: true,
+      allowPreferencesWindow: false,
+      allowQuit: false,
+      allowOpenLinks: false,
+      allowPrint: false,
+      allowCopy: false,
+      allowPaste: false,
+      allowRightMouse: false,
+      URLFilter: [
+        {
+          action: 'allow',
+          active: true,
+          expression: `${frontendUrl}/exam/${examId}`,
+          regex: false
+        }
+      ],
+      quitURL: `${frontendUrl}/exam-completed`,
+      examKey: examSessionKey
+    };
+
+    // Generate XML content for .seb file
+    const sebXML = generateSEBXML(sebConfig);
+
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/seb');
+    res.setHeader('Content-Disposition', `attachment; filename="exam_${examId}.seb"`);
+
+    res.send(sebXML);
+  } catch (error) {
+    console.error('Error generating SEB config:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating SEB configuration'
+    });
+  }
+};
+
+// Helper function to generate unique exam session key
+function generateExamSessionKey(examId) {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 15);
+  return `${examId}_${timestamp}_${random}`;
+}
+
+// Helper function to generate SEB XML configuration
+function generateSEBXML(config) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<SEBConfig xmlns="http://safeexambrowser.org/namespace/sebconfig">
+  <startURL>${config.startURL}</startURL>
+  <browserViewMode>${config.browserViewMode}</browserViewMode>
+  <showTaskBar>${config.showTaskBar}</showTaskBar>
+  <showReloadButton>${config.showReloadButton}</showReloadButton>
+  <showTime>${config.showTime}</showTime>
+  <allowPreferencesWindow>${config.allowPreferencesWindow}</allowPreferencesWindow>
+  <allowQuit>${config.allowQuit}</allowQuit>
+  <allowOpenLinks>${config.allowOpenLinks}</allowOpenLinks>
+  <allowPrint>${config.allowPrint}</allowPrint>
+  <allowCopy>${config.allowCopy}</allowCopy>
+  <allowPaste>${config.allowPaste}</allowPaste>
+  <allowRightMouse>${config.allowRightMouse}</allowRightMouse>
+  <URLFilter>
+    <action>${config.URLFilter[0].action}</action>
+    <active>${config.URLFilter[0].active}</active>
+    <expression>${config.URLFilter[0].expression}</expression>
+    <regex>${config.URLFilter[0].regex}</regex>
+  </URLFilter>
+  <quitURL>${config.quitURL}</quitURL>
+  <examKey>${config.examKey}</examKey>
+</SEBConfig>`;
+}

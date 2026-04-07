@@ -12,7 +12,8 @@ const {
   getAllPublicExams,
   getPublicExamById,
   getPublicQuestionsByExam,
-  submitExamResults
+  submitExamResults,
+  generateSEBConfig
 } = require('../controllers/examTestController');
 const { protect } = require('../middleware/auth');
 
@@ -32,6 +33,10 @@ router.get('/public/:id/questions', getPublicQuestionsByExam);
 // @route   POST /api/exams/public/:id/submit
 // @desc    Submit exam results (public access)
 router.post('/public/:id/submit', submitExamResults);
+
+// @route   GET /api/exams/:id/seb-config
+// @desc    Generate SEB configuration for exam (requires authentication)
+router.get('/:id/seb-config', protect, generateSEBConfig);
 
 // All routes below are protected
 router.use(protect);

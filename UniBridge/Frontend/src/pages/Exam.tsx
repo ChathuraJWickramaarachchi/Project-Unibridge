@@ -37,11 +37,34 @@ const Exam = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  // Check if running in Safe Exam Browser
+  const isRunningInSEB = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isLockdownMode = urlParams.get('lockdown') === 'true';
+    
+    // Check for SEB-specific indicators
+    const sebIndicators = [
+      navigator.userAgent.includes('SEB'),
+      document.querySelector('meta[name="seb"]') !== null,
+      window.location.hostname.includes('seb'),
+      isLockdownMode
+    ];
+    
+    return sebIndicators.some(indicator => indicator);
+  };
+
   // Fetch exam data and questions
   useEffect(() => {
     if (!examId) {
       toast.error("No exam ID provided");
       navigate("/exam-list");
+      return;
+    }
+
+    // Check if running in SEB before loading exam
+    if (!isRunningInSEB()) {
+      toast.error("This exam requires Safe Exam Browser for security");
+      navigate(`/download-seb/${examId}`);
       return;
     }
 
@@ -90,6 +113,92 @@ const Exam = () => {
 
     fetchExamData();
   }, [examId, navigate]);
+
+  // Additional lockdown measures when exam starts
+  useEffect(() => {
+    if (examStarted && isRunningInSEB()) {
+      // Prevent context menu (right-click)
+      const handleContextMenu = (e: MouseEvent) => {
+        e.preventDefault();
+        toast.warning("Right-click is disabled during the exam");
+      };
+
+      // Prevent keyboard shortcuts
+      const handleKeyDown = (e: KeyboardEvent) => {
+        // Prevent Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A, F12, etc.
+        if (e.ctrlKey || e.altKey || e.metaKey) {
+          if (['c', 'v', 'x', 'a', 's', 'p', 'u', 'i', 'j', 'w', 't', 'n', 'r', 'f', 'h', 'g', 'o', 'l', 'q', 'z'].includes(e.key.toLowerCase()) ||
+              e.key === 'F12' || e.key === 'F11' || e.key.startsWith('F')) {
+            e.preventDefault();
+            toast.warning("Keyboard shortcuts are disabled during the exam");
+            return false;
+          }
+        }
+
+        // Prevent F12 (dev tools)
+        if (e.key === 'F12') {
+          e.preventDefault();
+          toast.warning("Developer tools are disabled during the exam");
+          return false;
+        }
+
+        // Prevent Print Screen
+        if (e.key === 'PrintScreen') {
+          e.preventDefault();
+          toast.warning("Screenshots are not allowed during the exam");
+          return false;
+        }
+      };
+
+      // Prevent copy/paste
+      const handleCopy = (e: ClipboardEvent) => {
+        e.preventDefault();
+        toast.warning("Copying is disabled during the exam");
+      };
+
+      const handlePaste = (e: ClipboardEvent) => {
+        e.preventDefault();
+        toast.warning("Pasting is disabled during the exam");
+      };
+
+      // Prevent drag and drop
+      const handleDragStart = (e: DragEvent) => {
+        e.preventDefault();
+      };
+
+      const handleDrop = (e: DragEvent) => {
+        e.preventDefault();
+      };
+
+      // Prevent window blur (switching tabs/applications)
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          toast.error("Switching tabs or applications is not allowed during the exam!");
+          // Could auto-submit or warn
+        }
+      };
+
+      // Add event listeners
+      document.addEventListener('contextmenu', handleContextMenu);
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('copy', handleCopy);
+      document.addEventListener('paste', handlePaste);
+      document.addEventListener('dragstart', handleDragStart);
+      document.addEventListener('drop', handleDrop);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      // Cleanup function
+      return () => {
+        document.removeEventListener('contextmenu', handleContextMenu);
+        document.removeEventListener('keydown', handleKeyDown);
+        document.removeEventListener('copy', handleCopy);
+        document.removeEventListener('paste', handlePaste);
+        document.removeEventListener('dragstart', handleDragStart);
+        document.removeEventListener('drop', handleDrop);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    }
+  }, [examStarted]);
 
   const handleAnswerSelect = (questionId: string, answerIndex: number) => {
     setSelectedAnswers(prev => ({

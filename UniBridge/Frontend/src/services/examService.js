@@ -297,6 +297,34 @@ class ExamService {
     }
   }
 
+  // Download SEB configuration for exam
+  async downloadSEBConfig(examId) {
+    try {
+      const response = await axios.get(
+        `${API_URL}/${examId}/seb-config`,
+        {
+          ...this.getAuthHeaders(),
+          responseType: 'blob' // Important for file download
+        }
+      );
+
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `exam_${examId}.seb`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error downloading SEB config:', error);
+      throw error.response?.data || { message: 'Failed to download SEB configuration' };
+    }
+  }
+
   // ==================== CONVENIENCE ALIASES FOR ADMIN COMPONENTS ====================
 
   // Alias for admin exam creation
