@@ -304,12 +304,19 @@ class ExamService {
         `${API_URL}/${examId}/seb-config`,
         {
           ...this.getAuthHeaders(),
-          responseType: 'blob' // Important for file download
+          responseType: 'arraybuffer'
         }
       );
 
-      // Create blob link to download
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const contentType = response.headers['content-type'] || '';
+      if (contentType.includes('application/json') || contentType.includes('text/html')) {
+        const text = new TextDecoder('utf-8').decode(response.data);
+        console.error('Unexpected SEB response:', text);
+        throw { message: 'Failed to download SEB configuration. The server returned an error.' };
+      }
+
+      const fileBlob = new Blob([response.data], { type: 'application/octet-stream' });
+      const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `exam_${examId}.seb`);
@@ -321,7 +328,7 @@ class ExamService {
       return { success: true };
     } catch (error) {
       console.error('Error downloading SEB config:', error);
-      throw error.response?.data || { message: 'Failed to download SEB configuration' };
+      throw error.response?.data || error.message || { message: 'Failed to download SEB configuration' };
     }
   }
 

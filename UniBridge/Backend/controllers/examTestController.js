@@ -1,3 +1,4 @@
+import zlib from 'zlib';
 import ExamTest from '../models/ExamTest.js';
 import Question from '../models/Question.js';
 
@@ -537,14 +538,17 @@ const generateSEBConfig = async (req, res) => {
       examKey: examSessionKey
     };
 
-    // Generate XML content for .seb file
-    const sebXML = generateSEBXML(sebConfig);
+    // Generate plist XML content for .seb file
+    const sebPlist = generateSEBPlist(sebConfig);
+    const gzippedSeb = zlib.gzipSync(Buffer.from(sebPlist, 'utf8'));
+    const sebBuffer = Buffer.concat([Buffer.from('plnd'), gzippedSeb]);
 
     // Set headers for file download
-    res.setHeader('Content-Type', 'application/seb');
+    res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="exam_${examId}.seb"`);
+    res.setHeader('Content-Length', sebBuffer.length);
 
-    res.send(sebXML);
+    res.send(sebBuffer);
   } catch (error) {
     console.error('Error generating SEB config:', error);
     res.status(500).json({
@@ -570,31 +574,47 @@ function escapeXML(value) {
     .replace(/'/g, '&apos;');
 }
 
-// Helper function to generate SEB XML configuration
-function generateSEBXML(config) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<SEBConfig xmlns="http://safeexambrowser.org/namespace/sebconfig">
-  <startURL>${escapeXML(config.startURL)}</startURL>
-  <browserViewMode>${config.browserViewMode}</browserViewMode>
-  <showTaskBar>${config.showTaskBar}</showTaskBar>
-  <showReloadButton>${config.showReloadButton}</showReloadButton>
-  <showTime>${config.showTime}</showTime>
-  <allowPreferencesWindow>${config.allowPreferencesWindow}</allowPreferencesWindow>
-  <allowQuit>${config.allowQuit}</allowQuit>
-  <allowOpenLinks>${config.allowOpenLinks}</allowOpenLinks>
-  <allowPrint>${config.allowPrint}</allowPrint>
-  <allowCopy>${config.allowCopy}</allowCopy>
-  <allowPaste>${config.allowPaste}</allowPaste>
-  <allowRightMouse>${config.allowRightMouse}</allowRightMouse>
-  <URLFilter>
-    <action>${escapeXML(config.URLFilter[0].action)}</action>
-    <active>${config.URLFilter[0].active}</active>
-    <expression>${escapeXML(config.URLFilter[0].expression)}</expression>
-    <regex>${config.URLFilter[0].regex}</regex>
-  </URLFilter>
-  <quitURL>${escapeXML(config.quitURL)}</quitURL>
-  <examKey>${escapeXML(config.examKey)}</examKey>
-</SEBConfig>`;
+function booleanXML(value) {
+  return value ? '<true/>' : '<false/>';
+}
+
+function generateSEBPlist(config) {
+  const filterItems = config.URLFilter.map(filter => {
+    return [
+      '    <dict>',
+      `      <key>action</key><string>${escapeXML(filter.action)}</string>`,
+      `      <key>active</key>${booleanXML(filter.active)}`,
+      `      <key>expression</key><string>${escapeXML(filter.expression)}</string>`,
+      `      <key>regex</key>${booleanXML(filter.regex)}`,
+      '    </dict>',
+    ].join('\n');
+  }).join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n` +
+    `<plist version="1.0">\n` +
+    `<dict>\n` +
+    `  <key>startURL</key><string>${escapeXML(config.startURL)}</string>\n` +
+    `  <key>quitURL</key><string>${escapeXML(config.quitURL)}</string>\n` +
+    `  <key>browserViewMode</key><integer>${config.browserViewMode}</integer>\n` +
+    `  <key>showTaskBar</key>${booleanXML(config.showTaskBar)}\n` +
+    `  <key>showReloadButton</key>${booleanXML(config.showReloadButton)}\n` +
+    `  <key>showTime</key>${booleanXML(config.showTime)}\n` +
+    `  <key>allowPreferencesWindow</key>${booleanXML(config.allowPreferencesWindow)}\n` +
+    `  <key>allowQuit</key>${booleanXML(config.allowQuit)}\n` +
+    `  <key>allowOpenLinks</key>${booleanXML(config.allowOpenLinks)}\n` +
+    `  <key>allowPrint</key>${booleanXML(config.allowPrint)}\n` +
+    `  <key>allowCopy</key>${booleanXML(config.allowCopy)}\n` +
+    `  <key>allowPaste</key>${booleanXML(config.allowPaste)}\n` +
+    `  <key>allowRightMouse</key>${booleanXML(config.allowRightMouse)}\n` +
+    `  <key>URLFilter</key>\n` +
+    `  <array>\n` +
+    `${filterItems}\n` +
+    `  </array>\n` +
+    `  <key>browserWindowWebView</key><integer>3</integer>\n` +
+    `  <key>URLFilterEnableContentFilter</key><false/>\n` +
+    `</dict>\n` +
+    `</plist>`;
 }
 
 export {
