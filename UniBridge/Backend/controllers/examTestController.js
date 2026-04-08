@@ -502,8 +502,11 @@ const generateSEBConfig = async (req, res) => {
       });
     }
 
-    // Get frontend URL from environment or default
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    // Get frontend URL from environment or from the request origin
+    const frontendUrl =
+      (process.env.FRONTEND_URL && process.env.FRONTEND_URL.replace(/\/$/, '')) ||
+      req.get('origin') ||
+      'http://localhost:8080';
 
     // Generate unique exam session key
     const examSessionKey = generateExamSessionKey(examId);

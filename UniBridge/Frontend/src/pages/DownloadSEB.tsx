@@ -14,7 +14,7 @@ const DownloadSEB = () => {
   const [sebDownloaded, setSebDownloaded] = useState(false);
 
   const downloadSEBConfig = async () => {
-    if (!examId) return;
+    if (!examId) return false;
 
     try {
       setDownloading(true);
@@ -23,25 +23,33 @@ const DownloadSEB = () => {
       if (response.success) {
         setSebDownloaded(true);
         toast.success("SEB configuration downloaded successfully!");
-      } else {
-        toast.error("Failed to download SEB configuration");
+        return true;
       }
+
+      toast.error("Failed to download SEB configuration");
+      return false;
     } catch (error) {
       console.error("Error downloading SEB config:", error);
       toast.error("Failed to download SEB configuration");
+      return false;
     } finally {
       setDownloading(false);
     }
   };
 
-  const openSEBDownloadPage = () => {
-    window.open('https://safeexambrowser.org/download_en.html', '_blank');
+  const startExam = async () => {
+    if (!examId) return;
+
+    const downloaded = await downloadSEBConfig();
+    if (downloaded) {
+      toast.success(
+        "Exam config downloaded. If SEB does not open automatically, open the downloaded .seb file from your downloads folder."
+      );
+    }
   };
 
-  const startExam = () => {
-    if (examId) {
-      navigate(`/exam/${examId}`);
-    }
+  const openSEBDownloadPage = () => {
+    window.open('https://safeexambrowser.org/download_en.html', '_blank');
   };
 
   return (
@@ -94,43 +102,21 @@ const DownloadSEB = () => {
                 2
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Download Exam Configuration</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Download the exam-specific configuration file (.seb) that will automatically start the exam in SEB.
-                </p>
-                <Button
-                  onClick={downloadSEBConfig}
-                  disabled={downloading}
-                  className="w-full sm:w-auto"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  {downloading ? "Downloading..." : "Download Exam Config"}
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
-              <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">
-                3
-              </div>
-              <div>
                 <h3 className="font-semibold mb-1">Start the Exam</h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                  After installing SEB, open the downloaded .seb file to start the exam in the secure environment.
+                  Click Start Exam to download the exam configuration and launch the exam in SEB.
                 </p>
-                {sebDownloaded && (
-                  <div className="flex items-center gap-2 text-green-600 mb-3">
-                    <CheckCircle className="w-4 h-4" />
-                    <span className="text-sm">Configuration downloaded successfully</span>
-                  </div>
-                )}
                 <Button
                   onClick={startExam}
+                  disabled={downloading}
                   variant="outline"
                   className="w-full sm:w-auto"
                 >
-                  Go to Exam Page
+                  {downloading ? "Starting..." : "Start Exam"}
                 </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  If your browser does not open SEB automatically, open the downloaded .seb file from your downloads folder.
+                </p>
               </div>
             </div>
           </div>
