@@ -561,11 +561,20 @@ function generateExamSessionKey(examId) {
   return `${examId}_${timestamp}_${random}`;
 }
 
+function escapeXML(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 // Helper function to generate SEB XML configuration
 function generateSEBXML(config) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <SEBConfig xmlns="http://safeexambrowser.org/namespace/sebconfig">
-  <startURL>${config.startURL}</startURL>
+  <startURL>${escapeXML(config.startURL)}</startURL>
   <browserViewMode>${config.browserViewMode}</browserViewMode>
   <showTaskBar>${config.showTaskBar}</showTaskBar>
   <showReloadButton>${config.showReloadButton}</showReloadButton>
@@ -578,13 +587,13 @@ function generateSEBXML(config) {
   <allowPaste>${config.allowPaste}</allowPaste>
   <allowRightMouse>${config.allowRightMouse}</allowRightMouse>
   <URLFilter>
-    <action>${config.URLFilter[0].action}</action>
+    <action>${escapeXML(config.URLFilter[0].action)}</action>
     <active>${config.URLFilter[0].active}</active>
-    <expression>${config.URLFilter[0].expression}</expression>
+    <expression>${escapeXML(config.URLFilter[0].expression)}</expression>
     <regex>${config.URLFilter[0].regex}</regex>
   </URLFilter>
-  <quitURL>${config.quitURL}</quitURL>
-  <examKey>${config.examKey}</examKey>
+  <quitURL>${escapeXML(config.quitURL)}</quitURL>
+  <examKey>${escapeXML(config.examKey)}</examKey>
 </SEBConfig>`;
 }
 
