@@ -1,10 +1,11 @@
 # Dependency directories
 node_modules/
-/jspm_packages/
+jspm_packages/
 
 # Production build
 build/
 dist/
+out/
 
 # Environment variables
 .env
@@ -23,6 +24,11 @@ lerna-debug.log*
 .DS_Store
 Thumbs.db
 
-# Optional IDE folders
+# IDE folders
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# Project specific
+UniBridge/Backend/uploads/
