@@ -100,6 +100,7 @@ const Jobs = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     title: "",
     departmentId: "",
@@ -156,7 +157,29 @@ const Jobs = () => {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
+  const validateCreateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.title.trim()) errors.title = "Job title is required";
+    if (!formData.departmentId) errors.departmentId = "Please select a department";
+    if (!formData.location.trim()) errors.location = "Location is required";
+    if (!formData.deadline) errors.deadline = "Application deadline is required";
+    if (!formData.description.trim()) errors.description = "Job description is required";
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateEditForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.title.trim()) errors.editTitle = "Job title is required";
+    if (!formData.location.trim()) errors.editLocation = "Location is required";
+    if (!formData.deadline) errors.editDeadline = "Deadline is required";
+    if (!formData.description.trim()) errors.editDescription = "Description is required";
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleCreate = async () => {
+    if (!validateCreateForm()) return;
     try {
       const response = await jobService.createJob({
         ...formData,
@@ -176,6 +199,7 @@ const Jobs = () => {
 
   const handleUpdate = async () => {
     if (!selectedJob) return;
+    if (!validateEditForm()) return;
     try {
       const response = await jobService.updateJob(selectedJob._id, {
         title: formData.title,
@@ -228,6 +252,7 @@ const Jobs = () => {
       positions: 1,
       isFeatured: false,
     });
+    setFormErrors({});
   };
 
   const openEditDialog = (job: Job) => {
@@ -334,15 +359,18 @@ const Jobs = () => {
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Job Title</Label>
+                  <Label htmlFor="title">Job Title <span className="text-destructive">*</span></Label>
                   <Input
                     id="title"
                     placeholder="e.g., Software Engineer Intern"
                     value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
+                    className={formErrors.title ? "border-destructive focus-visible:ring-destructive" : ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value });
+                      if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, title: "" }));
+                    }}
                   />
+                  {formErrors.title && <p className="text-xs text-destructive">{formErrors.title}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="type">Job Type</Label>
@@ -364,12 +392,13 @@ const Jobs = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
+                <Label htmlFor="department">Department <span className="text-destructive">*</span></Label>
                 <Select
                   value={formData.departmentId}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, departmentId: value })
-                  }
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, departmentId: value });
+                    setFormErrors((prev) => ({ ...prev, departmentId: "" }));
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select department" />
@@ -399,44 +428,54 @@ const Jobs = () => {
                     })}
                   </SelectContent>
                 </Select>
+                {formErrors.departmentId && <p className="text-xs text-destructive">{formErrors.departmentId}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
+                  <Label htmlFor="location">Location <span className="text-destructive">*</span></Label>
                   <Input
                     id="location"
                     placeholder="e.g., Colombo, Sri Lanka"
                     value={formData.location}
-                    onChange={(e) =>
-                      setFormData({ ...formData, location: e.target.value })
-                    }
+                    className={formErrors.location ? "border-destructive focus-visible:ring-destructive" : ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, location: e.target.value });
+                      if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, location: "" }));
+                    }}
                   />
+                  {formErrors.location && <p className="text-xs text-destructive">{formErrors.location}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="salary">Salary (Optional)</Label>
+                  <Label htmlFor="salary">Salary / Month (Optional)</Label>
                   <Input
                     id="salary"
-                    placeholder="e.g., Rs. 50,000/month"
+                    type="number"
+                    min={0}
+                    placeholder="e.g., 50000"
                     value={formData.salary}
-                    onChange={(e) =>
-                      setFormData({ ...formData, salary: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, "");
+                      setFormData({ ...formData, salary: val });
+                    }}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="deadline">Application Deadline</Label>
+                  <Label htmlFor="deadline">Application Deadline <span className="text-destructive">*</span></Label>
                   <Input
                     id="deadline"
                     type="date"
                     value={formData.deadline}
-                    onChange={(e) =>
-                      setFormData({ ...formData, deadline: e.target.value })
-                    }
+                    className={formErrors.deadline ? "border-destructive focus-visible:ring-destructive" : ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, deadline: e.target.value });
+                      if (e.target.value) setFormErrors((prev) => ({ ...prev, deadline: "" }));
+                    }}
                   />
+                  {formErrors.deadline && <p className="text-xs text-destructive">{formErrors.deadline}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="positions">Number of Positions</Label>
@@ -456,16 +495,19 @@ const Jobs = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Job Description</Label>
+                <Label htmlFor="description">Job Description <span className="text-destructive">*</span></Label>
                 <Textarea
                   id="description"
                   placeholder="Describe the role, responsibilities, and what you're looking for..."
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                  className={formErrors.description ? "border-destructive focus-visible:ring-destructive" : ""}
+                  onChange={(e) => {
+                    setFormData({ ...formData, description: e.target.value });
+                    if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, description: "" }));
+                  }}
                   rows={4}
                 />
+                {formErrors.description && <p className="text-xs text-destructive">{formErrors.description}</p>}
               </div>
 
               <div className="space-y-2">
@@ -555,16 +597,7 @@ const Jobs = () => {
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={
-                  !formData.title ||
-                  !formData.departmentId ||
-                  !formData.location ||
-                  !formData.deadline ||
-                  !formData.description
-                }
-              >
+              <Button onClick={handleCreate}>
                 Post Job
               </Button>
             </DialogFooter>
@@ -793,48 +826,61 @@ const Jobs = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-title">Job Title</Label>
+              <Label htmlFor="edit-title">Job Title <span className="text-destructive">*</span></Label>
               <Input
                 id="edit-title"
                 value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
+                className={formErrors.editTitle ? "border-destructive focus-visible:ring-destructive" : ""}
+                onChange={(e) => {
+                  setFormData({ ...formData, title: e.target.value });
+                  if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, editTitle: "" }));
+                }}
               />
+              {formErrors.editTitle && <p className="text-xs text-destructive">{formErrors.editTitle}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-location">Location</Label>
+                <Label htmlFor="edit-location">Location <span className="text-destructive">*</span></Label>
                 <Input
                   id="edit-location"
                   value={formData.location}
-                  onChange={(e) =>
-                    setFormData({ ...formData, location: e.target.value })
-                  }
+                  className={formErrors.editLocation ? "border-destructive focus-visible:ring-destructive" : ""}
+                  onChange={(e) => {
+                    setFormData({ ...formData, location: e.target.value });
+                    if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, editLocation: "" }));
+                  }}
                 />
+                {formErrors.editLocation && <p className="text-xs text-destructive">{formErrors.editLocation}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-salary">Salary</Label>
+                <Label htmlFor="edit-salary">Salary / Month</Label>
                 <Input
                   id="edit-salary"
+                  type="number"
+                  min={0}
+                  placeholder="e.g., 50000"
                   value={formData.salary}
-                  onChange={(e) =>
-                    setFormData({ ...formData, salary: e.target.value })
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+                    setFormData({ ...formData, salary: val });
+                  }}
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-deadline">Deadline</Label>
+                <Label htmlFor="edit-deadline">Deadline <span className="text-destructive">*</span></Label>
                 <Input
                   id="edit-deadline"
                   type="date"
                   value={formData.deadline}
-                  onChange={(e) =>
-                    setFormData({ ...formData, deadline: e.target.value })
-                  }
+                  className={formErrors.editDeadline ? "border-destructive focus-visible:ring-destructive" : ""}
+                  onChange={(e) => {
+                    setFormData({ ...formData, deadline: e.target.value });
+                    if (e.target.value) setFormErrors((prev) => ({ ...prev, editDeadline: "" }));
+                  }}
                 />
+                {formErrors.editDeadline && <p className="text-xs text-destructive">{formErrors.editDeadline}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-positions">Positions</Label>
@@ -853,15 +899,18 @@ const Jobs = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="edit-description">Description <span className="text-destructive">*</span></Label>
               <Textarea
                 id="edit-description"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                className={formErrors.editDescription ? "border-destructive focus-visible:ring-destructive" : ""}
+                onChange={(e) => {
+                  setFormData({ ...formData, description: e.target.value });
+                  if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, editDescription: "" }));
+                }}
                 rows={4}
               />
+              {formErrors.editDescription && <p className="text-xs text-destructive">{formErrors.editDescription}</p>}
             </div>
             <div className="flex items-center justify-between">
               <Label htmlFor="edit-featured">Featured Job</Label>

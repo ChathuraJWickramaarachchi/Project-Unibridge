@@ -1,14 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { Bell, CheckCheck, Trash2, Briefcase, Star, Info } from "lucide-react";
+import { Bell, CheckCheck, Trash2, Briefcase, Star, Info, Calendar, Clock, MapPin, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import examService from "@/services/examService";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
@@ -16,8 +23,9 @@ interface Notification {
   _id: string;
   title: string;
   message: string;
-  type: "application" | "status_update" | "general";
+  type: "application" | "status_update" | "exam" | "general";
   isRead: boolean;
+  relatedId?: string;
   createdAt: string;
 }
 
@@ -34,6 +42,7 @@ function timeAgo(dateStr: string) {
 function NotifIcon({ type }: { type: string }) {
   if (type === "application") return <Briefcase className="w-4 h-4 text-primary" />;
   if (type === "status_update") return <Star className="w-4 h-4 text-amber-500" />;
+  if (type === "exam") return <Calendar className="w-4 h-4 text-purple-500" />;
   return <Info className="w-4 h-4 text-blue-500" />;
 }
 
@@ -42,6 +51,8 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
+  const [selectedExam, setSelectedExam] = useState<any>(null);
+  const [isExamDialogOpen, setIsExamDialogOpen] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -109,10 +120,30 @@ export default function NotificationBell() {
     }
   };
 
+  const handleNotificationClick = async (notif: Notification) => {
+    if (!notif.isRead) {
+      markAsRead(notif._id);
+    }
+    
+    if (notif.type === "exam" && notif.relatedId) {
+      try {
+        const res = await examService.getExamById(notif.relatedId);
+        if (res.success) {
+          setSelectedExam(res.data);
+          setIsExamDialogOpen(true);
+          setOpen(false);
+        }
+      } catch (err) {
+        toast.error("Failed to load exam details.");
+      }
+    }
+  };
+
   if (!user) return null;
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -170,7 +201,7 @@ export default function NotificationBell() {
             notifications.map((notif) => (
               <div
                 key={notif._id}
-                onClick={() => !notif.isRead && markAsRead(notif._id)}
+                onClick={() => handleNotificationClick(notif)}
                 className={`group flex items-start gap-3 px-4 py-3 border-b border-border/50 last:border-0 transition-colors cursor-pointer
                   ${notif.isRead ? "hover:bg-accent/40" : "bg-primary/5 hover:bg-primary/10"}`}
               >
@@ -209,5 +240,69 @@ export default function NotificationBell() {
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
+
+    <Dialog open={isExamDialogOpen} onOpenChange={setIsExamDialogOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-primary" />
+            Exam Schedule Details
+          </DialogTitle>
+        </DialogHeader>
+        
+        {selectedExam && (
+          <div className="space-y-4 py-4">
+            <div>
+              <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2 mb-1">
+                <Briefcase className="w-4 h-4" /> Position
+              </h4>
+              <p className="font-medium text-lg">{selectedExam.jobId?.title || "N/A"}</p>
+              <p className="text-sm text-muted-foreground">
+                {selectedExam.companyId?.company || `${selectedExam.companyId?.firstName} ${selectedExam.companyId?.lastName}`}
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 border-y border-border py-4">
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2 mb-1">
+                  <Calendar className="w-4 h-4" /> Date
+                </h4>
+                <p className="font-medium">
+                  {new Date(selectedExam.examDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2 mb-1">
+                  <Clock className="w-4 h-4" /> Time
+                </h4>
+                <p className="font-medium">{selectedExam.examTime}</p>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2 mb-1">
+                <MapPin className="w-4 h-4" /> Location
+              </h4>
+              <p className="font-medium">{selectedExam.location?.type}</p>
+              {selectedExam.location?.address && (
+                <p className="text-sm text-muted-foreground mt-1">{selectedExam.location.address}</p>
+              )}
+            </div>
+
+            {selectedExam.instructions && (
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2 mb-1">
+                  <FileText className="w-4 h-4" /> Instructions
+                </h4>
+                <p className="text-sm whitespace-pre-wrap bg-muted/50 p-3 rounded-md border border-border">
+                  {selectedExam.instructions}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

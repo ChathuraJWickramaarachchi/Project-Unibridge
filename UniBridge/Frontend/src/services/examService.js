@@ -332,67 +332,6 @@ class ExamService {
     }
   }
 
-  // Download SEB configuration for exam
-  async downloadSEBConfig(examId) {
-    try {
-      const response = await axios.get(
-        `${API_URL}/${examId}/seb-config`,
-        {
-          ...this.getAuthHeaders(),
-          responseType: 'arraybuffer'
-        }
-      );
-
-      const contentType = response.headers['content-type'] || '';
-      if (contentType.includes('application/json') || contentType.includes('text/html')) {
-        const text = new TextDecoder('utf-8').decode(response.data);
-        console.error('Unexpected SEB response:', text);
-        throw { message: 'Failed to download SEB configuration. The server returned an error.' };
-      }
-
-      const fileBlob = new Blob([response.data], { type: 'application/octet-stream' });
-      const url = window.URL.createObjectURL(fileBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `exam_${examId}.seb`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error downloading SEB config:', error);
-      throw error.response?.data || error.message || { message: 'Failed to download SEB configuration' };
-    }
-  }
-
-  // ==================== CONVENIENCE ALIASES FOR ADMIN COMPONENTS ====================
-
-  // Alias for admin exam creation
-  async createExam(examData) {
-    return this.createAdminExam(examData);
-  }
-
-  // Alias for getting all exams (admin)
-  async getAllExams() {
-    return this.getAllAdminExams();
-  }
-
-  // Alias for getting exam by ID (admin)
-  async getExamById(examId) {
-    return this.getAdminExamById(examId);
-  }
-
-  // Alias for updating exam (admin)
-  async updateExam(examId, examData) {
-    return this.updateAdminExam(examId, examData);
-  }
-
-  // Alias for deleting exam (admin)
-  async deleteExam(examId) {
-    return this.deleteAdminExam(examId);
-  }
 }
 
 export default new ExamService();

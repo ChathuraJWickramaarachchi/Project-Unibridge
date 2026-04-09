@@ -35,7 +35,7 @@ const ViewExams = () => {
   const loadExams = async () => {
     try {
       setLoading(true);
-      const response = await examService.getAllExams();
+      const response = await examService.getAllAdminExams();
       if (response.success) {
         setExams(response.data);
       }
@@ -55,7 +55,7 @@ const ViewExams = () => {
 
     try {
       setDeleting(true);
-      const response = await examService.deleteExam(deleteId);
+      const response = await examService.deleteAdminExam(deleteId);
 
       if (response.success) {
         toast({

@@ -1,6 +1,8 @@
-import Exam from '../models/Exam.js';
-import Job from '../models/Job.js';
-import User from '../models/User.js';
+const Exam = require('../models/Exam');
+const Job = require('../models/Job');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
+const Application = require('../models/Application');
 
 // @desc    Create a new exam schedule
 // @route   POST /api/exams
@@ -101,6 +103,47 @@ const createExam = async (req, res) => {
     });
 
     console.log('Exam created successfully:', exam._id);
+
+    // ── Send notifications to all applicants of this job ──────────────────
+    try {
+      // Get all approved applicants for this job
+      const applications = await Application.find({ jobId })
+        .select('studentId')
+        .lean();
+
+      // Merge with explicitly listed studentIds (if any)
+      const allStudentIds = [
+        ...new Set([
+          ...applications.map(a => a.studentId.toString()),
+          ...validStudentIds.map(id => id.toString()),
+        ]),
+      ];
+
+      const examDateFormatted = new Date(examDate).toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      });
+      const locationText = location.type === 'Physical'
+        ? `Physical — ${location.address}`
+        : 'Online';
+
+      await Promise.allSettled(
+        allStudentIds.map(studentId =>
+          Notification.create({
+            userId: studentId,
+            title: `📅 Exam Scheduled: ${job.title}`,
+            message: `A ${examType} exam has been scheduled for the "${job.title}" position on ${examDateFormatted} at ${examTime}. Location: ${locationText}.${instructions ? ' Instructions: ' + instructions : ''}`,
+            type: 'exam',
+            relatedId: exam._id,
+            isRead: false,
+          })
+        )
+      );
+      console.log(`Exam notifications sent to ${allStudentIds.length} student(s)`);
+    } catch (notifErr) {
+      // Non-critical — log but don't fail the request
+      console.error('Failed to send exam notifications:', notifErr.message);
+    }
+    // ──────────────────────────────────────────────────────────────────────
 
     // Populate job details
     const populatedExam = await Exam.findById(exam._id)
@@ -248,6 +291,46 @@ const updateExam = async (req, res) => {
 
     await exam.save();
 
+    // ── Notify students of exam update ────────────────────────────────────
+    try {
+      const updatedStudentIds = exam.studentIds.map(id => id.toString());
+      // Also notify any job applicants who weren't explicitly listed
+      const applications = await Application.find({ jobId: exam.jobId })
+        .select('studentId').lean();
+      const allStudentIds = [
+        ...new Set([
+          ...applications.map(a => a.studentId.toString()),
+          ...updatedStudentIds,
+        ]),
+      ];
+
+      const jobDoc = await Job.findById(exam.jobId).select('title').lean();
+      const jobTitle = jobDoc ? jobDoc.title : 'the position';
+      const examDateFormatted = new Date(exam.examDate).toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      });
+      const locationText = exam.location.type === 'Physical'
+        ? `Physical — ${exam.location.address}`
+        : 'Online';
+
+      await Promise.allSettled(
+        allStudentIds.map(studentId =>
+          Notification.create({
+            userId: studentId,
+            title: `🔄 Exam Updated: ${jobTitle}`,
+            message: `The ${exam.examType} exam for "${jobTitle}" has been updated. New schedule: ${examDateFormatted} at ${exam.examTime}. Location: ${locationText}.`,
+            type: 'exam',
+            relatedId: exam._id,
+            isRead: false,
+          })
+        )
+      );
+      console.log(`Exam update notifications sent to ${allStudentIds.length} student(s)`);
+    } catch (notifErr) {
+      console.error('Failed to send exam update notifications:', notifErr.message);
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     const updatedExam = await Exam.findById(exam._id)
       .populate('jobId', 'title type department')
       .populate('studentIds', 'firstName lastName email');
@@ -330,8 +413,12 @@ const getExamById = async (req, res) => {
     const isStudent = exam.studentIds.some(student => 
       student._id.toString() === req.user.id
     );
+    const isApplicant = await Application.exists({
+      jobId: exam.jobId._id || exam.jobId,
+      studentId: req.user.id
+    });
 
-    if (!isCompanyOwner && !isStudent && req.user.role !== 'admin') {
+    if (!isCompanyOwner && !isStudent && !isApplicant && req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false, 
         message: 'Not authorized to view this exam' 

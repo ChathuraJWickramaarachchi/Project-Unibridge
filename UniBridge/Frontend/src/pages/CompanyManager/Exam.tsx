@@ -91,6 +91,7 @@ const CompanyExam = () => {
     locationAddress: "",
     instructions: ""
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchExamsAndJobs();
@@ -132,20 +133,16 @@ const CompanyExam = () => {
   };
 
   const handleSubmit = async () => {
-    console.log('Submit clicked, checking form data...');
-    console.log('Form data:', formData);
-    
-    if (!formData.jobId || !formData.examDate || !formData.examTime) {
-      toast.error("Please fill in all required fields");
-      return;
+    // Inline validation
+    const errors: Record<string, string> = {};
+    if (!formData.jobId) errors.jobId = "Please select a job posting";
+    if (!formData.examDate) errors.examDate = "Exam date is required";
+    if (!formData.examTime) errors.examTime = "Exam time is required";
+    if (formData.locationType === 'Physical' && !formData.locationAddress.trim()) {
+      errors.locationAddress = "Location address is required for physical exams";
     }
-
-    if (formData.locationType === 'Physical' && !formData.locationAddress) {
-      toast.error("Please provide location address for physical exams");
-      return;
-    }
-
-    console.log('All validations passed, creating exam...');
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     try {
       const examData = {
@@ -219,6 +216,7 @@ const CompanyExam = () => {
       locationAddress: "",
       instructions: ""
     });
+    setFormErrors({});
   };
 
   const openEditDialog = (exam: ExamSchedule) => {
@@ -505,12 +503,15 @@ const CompanyExam = () => {
           <div className="grid gap-4 py-4">
             {/* Job Selection */}
             <div className="grid gap-2">
-              <Label htmlFor="job">Select Job Posting *</Label>
+              <Label htmlFor="job">Select Job Posting <span className="text-destructive">*</span></Label>
               <Select
                 value={formData.jobId}
-                onValueChange={(value) => setFormData({ ...formData, jobId: value })}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, jobId: value });
+                  setFormErrors((prev) => ({ ...prev, jobId: "" }));
+                }}
               >
-                <SelectTrigger>
+                <SelectTrigger className={formErrors.jobId ? "border-destructive" : ""}>
                   <SelectValue placeholder="Choose a job posting" />
                 </SelectTrigger>
                 <SelectContent>
@@ -521,6 +522,7 @@ const CompanyExam = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {formErrors.jobId && <p className="text-xs text-destructive">{formErrors.jobId}</p>}
             </div>
 
             {/* Exam Type */}
@@ -544,23 +546,33 @@ const CompanyExam = () => {
             {/* Date and Time */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="exam-date">Exam Date *</Label>
+                <Label htmlFor="exam-date">Exam Date <span className="text-destructive">*</span></Label>
                 <Input
                   id="exam-date"
                   type="date"
                   value={formData.examDate}
-                  onChange={(e) => setFormData({ ...formData, examDate: e.target.value })}
+                  className={formErrors.examDate ? "border-destructive focus-visible:ring-destructive" : ""}
+                  onChange={(e) => {
+                    setFormData({ ...formData, examDate: e.target.value });
+                    if (e.target.value) setFormErrors((prev) => ({ ...prev, examDate: "" }));
+                  }}
                   min={new Date().toISOString().split('T')[0]}
                 />
+                {formErrors.examDate && <p className="text-xs text-destructive">{formErrors.examDate}</p>}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="exam-time">Exam Time *</Label>
+                <Label htmlFor="exam-time">Exam Time <span className="text-destructive">*</span></Label>
                 <Input
                   id="exam-time"
                   type="time"
                   value={formData.examTime}
-                  onChange={(e) => setFormData({ ...formData, examTime: e.target.value })}
+                  className={formErrors.examTime ? "border-destructive focus-visible:ring-destructive" : ""}
+                  onChange={(e) => {
+                    setFormData({ ...formData, examTime: e.target.value });
+                    if (e.target.value) setFormErrors((prev) => ({ ...prev, examTime: "" }));
+                  }}
                 />
+                {formErrors.examTime && <p className="text-xs text-destructive">{formErrors.examTime}</p>}
               </div>
             </div>
 
@@ -584,14 +596,19 @@ const CompanyExam = () => {
             {/* Location Address (if Physical) */}
             {formData.locationType === 'Physical' && (
               <div className="grid gap-2">
-                <Label htmlFor="location-address">Location Address *</Label>
+                <Label htmlFor="location-address">Location Address <span className="text-destructive">*</span></Label>
                 <Textarea
                   id="location-address"
                   placeholder="Enter full address including room number"
                   value={formData.locationAddress}
-                  onChange={(e) => setFormData({ ...formData, locationAddress: e.target.value })}
+                  className={formErrors.locationAddress ? "border-destructive focus-visible:ring-destructive" : ""}
+                  onChange={(e) => {
+                    setFormData({ ...formData, locationAddress: e.target.value });
+                    if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, locationAddress: "" }));
+                  }}
                   rows={2}
                 />
+                {formErrors.locationAddress && <p className="text-xs text-destructive">{formErrors.locationAddress}</p>}
               </div>
             )}
 

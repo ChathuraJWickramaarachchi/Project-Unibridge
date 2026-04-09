@@ -1,5 +1,19 @@
 import mongoose from 'mongoose';
 
+const locationSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['Online', 'Physical'],
+    required: true
+  },
+  address: {
+    type: String,
+    required: function() {
+      return this.type === 'Physical';
+    }
+  }
+}, { _id: false });
+
 const examSchema = new mongoose.Schema({
   jobId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -29,17 +43,8 @@ const examSchema = new mongoose.Schema({
     required: true
   },
   location: {
-    type: {
-      type: String,
-      enum: ['Online', 'Physical'],
-      required: true
-    },
-    address: {
-      type: String,
-      required: function() {
-        return this.location.type === 'Physical';
-      }
-    }
+    type: locationSchema,
+    required: true
   },
   status: {
     type: String,
@@ -59,4 +64,5 @@ examSchema.index({ companyId: 1, examDate: -1 });
 examSchema.index({ studentIds: 1 });
 examSchema.index({ jobId: 1 });
 
-export default mongoose.model('Exam', examSchema, 'exam_schedule');
+module.exports = mongoose.model('Exam', examSchema, 'exam_schedule');
+

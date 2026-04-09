@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 
 const Settings = () => {
+  const { user, updateProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     companyName: "",
@@ -32,13 +34,46 @@ const Settings = () => {
     publicProfile: true,
   });
 
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        companyName: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+        email: user.email || "",
+        phone: user.phone || "",
+        website: "", // Not currently supported in backend schema
+        location: user.address || "",
+        description: user.profile?.bio || "",
+        notifications: true,
+        publicProfile: true,
+      });
+    }
+  }, [user]);
+
   const handleSave = async () => {
     try {
       setLoading(true);
-      // API call to save settings
-      toast.success("Settings saved successfully");
+      
+      const nameParts = formData.companyName.trim().split(' ');
+      const firstName = nameParts[0] || "Company";
+      const lastName = nameParts.slice(1).join(' ') || "Partner";
+
+      const res = await updateProfile({
+        firstName,
+        lastName,
+        phone: formData.phone,
+        address: formData.location,
+        profile: {
+          bio: formData.description
+        }
+      });
+
+      if (res && res.success) {
+        toast.success("Settings saved successfully");
+      } else {
+        toast.error(res?.error || "Failed to save settings");
+      }
     } catch (error) {
-      toast.error("Failed to save settings");
+      toast.error("An error occurred while saving settings");
     } finally {
       setLoading(false);
     }
@@ -60,7 +95,7 @@ const Settings = () => {
           <div className="flex items-center gap-6">
             <div className="relative">
               <Avatar className="w-24 h-24">
-                <AvatarImage src="" />
+                <AvatarImage src={user?.profile?.avatar || ""} />
                 <AvatarFallback className="text-2xl bg-primary/10 text-primary">
                   <Building2 className="w-10 h-10" />
                 </AvatarFallback>
@@ -117,10 +152,11 @@ const Settings = () => {
                   type="email"
                   placeholder="company@example.com"
                   value={formData.email}
+                  disabled
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="pl-9"
+                  className="pl-9 bg-muted/50 cursor-not-allowed"
                 />
               </div>
             </div>

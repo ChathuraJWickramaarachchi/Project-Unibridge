@@ -152,17 +152,22 @@ export default function PublicJobs() {
   const openApply = (job: Job, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!user) { toast.error("Please sign in to apply for jobs"); return; }
+    if (user.role !== "student") {
+      toast.error("Only students can apply for job postings");
+      return;
+    }
     setSelectedJob(job);
     setIsDetailOpen(false);
     setIsApplyOpen(true);
   };
 
   const handleApplySuccess = () => {
+    // Mark the job as applied in the UI so the button updates
     if (selectedJob) {
       setAppliedJobIds((prev) => new Set([...prev, selectedJob._id]));
     }
-    setIsApplyOpen(false);
-    toast.success("Application submitted! Check your notifications.");
+    // Don't close the modal here — the ApplyModal shows a success screen
+    // with a "Done" button. onClose (setIsApplyOpen(false)) handles the close.
   };
 
   return (
@@ -201,24 +206,6 @@ export default function PublicJobs() {
                 <X className="w-4 h-4" />
               </button>
             )}
-          </div>
-        </div>
-      </section>
-
-      {/* ── STATS BAR ── */}
-      <section className="border-b border-border/50 bg-card/50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-3 divide-x divide-border/50 py-4">
-            {[
-              { label: "Total Positions", value: jobs.length },
-              { label: "Internships", value: jobs.filter((j) => j.type === "Internship").length },
-              { label: "Permanent Jobs", value: jobs.filter((j) => j.type === "Permanent").length },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center px-4">
-                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                <div className="text-xs text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
