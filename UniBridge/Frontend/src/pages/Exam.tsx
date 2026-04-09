@@ -35,6 +35,7 @@ const Exam = () => {
   const [examData, setExamData] = useState<ExamData | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+  const [startingExam, setStartingExam] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Check if running in Safe Exam Browser
@@ -88,20 +89,9 @@ const Exam = () => {
         console.log("Exam data:", exam);
         setExamData(exam);
         setTimeLeft(exam.timeLimit * 60); // Convert minutes to seconds
-
-        // Fetch exam questions
-        const questionsResponse = await examService.getPublicQuestionsByExam(examId);
-        console.log("Questions response:", questionsResponse);
         
-        if (questionsResponse.success && questionsResponse.data) {
-          setQuestions(questionsResponse.data);
-          console.log("Questions loaded:", questionsResponse.data);
-        } else {
-          console.log("No questions found:", questionsResponse);
-          toast.error("No questions found for this exam");
-          navigate("/exam-list");
-          return;
-        }
+        // Leave question loading until exam start
+        console.log("Exam data loaded; waiting for Start Exam.", exam);
       } catch (error) {
         console.error("Error fetching exam data:", error);
         toast.error("Failed to load exam");
@@ -211,20 +201,51 @@ const Exam = () => {
     return questions.filter(q => selectedAnswers[q._id] === q.correctAnswer).length;
   };
 
-  const startExam = () => {
-    setExamStarted(true);
-    const startTime = Date.now();
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setExamCompleted(true);
-          submitResults(startTime);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  const startExam = async () => {
+    if (!examId) {
+      toast.error("Invalid exam ID.");
+      return;
+    }
+
+    if (!examData) {
+      toast.error("Exam data is not available yet.");
+      return;
+    }
+
+    try {
+      setStartingExam(true);
+      setLoading(true);
+
+      const questionsResponse = await examService.getPublicQuestionsByExam(examId);
+      console.log("Questions response:", questionsResponse);
+
+      if (!questionsResponse.success || !questionsResponse.data) {
+        toast.error("Failed to load exam questions.");
+        return;
+      }
+
+      setQuestions(questionsResponse.data);
+      setExamStarted(true);
+
+      const startTime = Date.now();
+      const timer = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setExamCompleted(true);
+            submitResults(startTime);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (error) {
+      console.error("Error starting exam:", error);
+      toast.error("Unable to start exam. Please try again.");
+    } finally {
+      setStartingExam(false);
+      setLoading(false);
+    }
   };
 
   const submitResults = async (startTime: number) => {
@@ -291,7 +312,7 @@ const Exam = () => {
   }
 
   // No exam data state
-  if (!examData || questions.length === 0) {
+  if (!examData) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
         <div className="text-center">
@@ -326,7 +347,7 @@ const Exam = () => {
           <div className="space-y-4 mb-8">
             <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
               <AlertCircle className="w-5 h-5 text-primary" />
-              <span className="text-foreground">{questions.length} questions</span>
+              <span className="text-foreground">{examData.questionCount || questions.length} questions</span>
             </div>
             <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
               <Clock className="w-5 h-5 text-primary" />
@@ -340,9 +361,10 @@ const Exam = () => {
           
           <button
             onClick={startExam}
-            className="w-full bg-primary text-primary-foreground py-4 rounded-lg font-semibold text-lg hover:bg-primary/90 transition-colors"
+            disabled={startingExam}
+            className="w-full bg-primary text-primary-foreground py-4 rounded-lg font-semibold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Start Exam
+            {startingExam ? 'Starting Exam...' : 'Start Exam'}
           </button>
         </div>
       </div>
@@ -353,6 +375,7 @@ const Exam = () => {
     const score = calculateScore();
     const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
     const passed = percentage >= (examData?.passingScore || 70);
+    const inSEB = isRunningInSEB();
     
     return (
       <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
@@ -368,8 +391,8 @@ const Exam = () => {
             </h2>
             <p className="text-muted-foreground">
               {passed 
-                ? `You've passed the ${examData?.title}!` 
-                : "Review the material and try again"}
+                ? `You've completed the ${examData?.title} exam.` 
+                : "Your answers have been submitted successfully."}
             </p>
           </div>
           
@@ -381,37 +404,32 @@ const Exam = () => {
               {percentage}%
             </div>
             <div className={`text-lg font-medium ${passed ? 'text-green-600' : 'text-red-600'}`}>
-              {passed ? "PASSED" : "FAILED"}
+              {passed ? "PASSED" : "COMPLETED"}
             </div>
           </div>
           
           <div className="space-y-3 text-left max-w-lg mx-auto">
-            <h3 className="font-semibold text-foreground mb-3">Review Answers:</h3>
-            {questions.map((q) => (
-              <div key={q._id} className="p-3 bg-muted/30 rounded-lg">
-                <p className="font-medium text-foreground mb-2">{q.text}</p>
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Your answer: </span>
-                  <span className={selectedAnswers[q._id] === q.correctAnswer ? 'text-green-600' : 'text-red-600'}>
-                    {selectedAnswers[q._id] !== undefined ? q.options[selectedAnswers[q._id]] : 'Not answered'}
-                  </span>
-                </div>
-                {selectedAnswers[q._id] !== q.correctAnswer && (
-                  <div className="text-sm text-green-600">
-                    <span>Correct answer: </span>
-                    <span>{q.options[q.correctAnswer]}</span>
-                  </div>
-                )}
-              </div>
-            ))}
+            <h3 className="font-semibold text-foreground mb-3">Next steps</h3>
+            <p className="text-muted-foreground">
+              Your exam answers were submitted. If you are using Safe Exam Browser, please complete the secure exit process below.
+            </p>
           </div>
-          
-          <button
-            onClick={() => navigate('/')}
-            className="mt-6 w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
-          >
-            Go to Home
-          </button>
+
+          {inSEB ? (
+            <button
+              onClick={() => navigate(`/exam-completed?lockdown=true`)}
+              className="mt-6 w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              Finish and Exit Safe Browser
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/')}
+              className="mt-6 w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              Go to Home
+            </button>
+          )}
         </div>
       </div>
     );

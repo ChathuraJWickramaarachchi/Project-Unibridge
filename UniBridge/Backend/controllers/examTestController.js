@@ -346,6 +346,174 @@ const getPublicQuestionsByExam = async (req, res) => {
   }
 };
 
+// ==================== SECURE EXAM ENDPOINTS (Authenticated - SEB) ====================
+
+// @desc    Get exam by ID (authenticated - for SEB secure exam flow)
+// @route   GET /api/exams/secure/:id
+// @access  Private
+const getSecureExamById = async (req, res) => {
+  try {
+    const exam = await ExamTest.findById(req.params.id);
+    
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        message: 'Exam not found'
+      });
+    }
+
+    if (exam.status !== 'active') {
+      return res.status(404).json({
+        success: false,
+        message: 'Exam not available'
+      });
+    }
+
+    const questionCount = await Question.countDocuments({ examId: exam._id });
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        ...exam.toObject(),
+        questionCount
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching secure exam:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch exam'
+    });
+  }
+};
+
+// @desc    Get questions for exam (authenticated - for SEB secure exam flow)
+// @route   GET /api/exams/secure/:id/questions
+// @access  Private
+const getSecureQuestionsByExam = async (req, res) => {
+  try {
+    const exam = await ExamTest.findById(req.params.id);
+    
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        message: 'Exam not found'
+      });
+    }
+
+    if (exam.status !== 'active') {
+      return res.status(404).json({
+        success: false,
+        message: 'Exam not available'
+      });
+    }
+
+    const questions = await Question.find({ examId: req.params.id })
+      .sort({ createdAt: 1 })
+      .select('-__v');
+    
+    res.status(200).json({
+      success: true,
+      data: questions
+    });
+  } catch (error) {
+    console.error('Error fetching secure questions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch questions'
+    });
+  }
+};
+
+// @desc    Submit exam results (authenticated - uses req.user.email to prevent impersonation)
+// @route   POST /api/exams/secure/:id/submit
+// @access  Private
+const secureSubmitExamResults = async (req, res) => {
+  try {
+    const { answers, duration } = req.body;
+    const examId = req.params.id;
+    // Use the authenticated user's email — prevents impersonation
+    const applicantEmail = req.user.email;
+
+    // Validate exam exists
+    const exam = await ExamTest.findById(examId);
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        message: 'Exam not found'
+      });
+    }
+
+    if (exam.status !== 'active') {
+      return res.status(404).json({
+        success: false,
+        message: 'Exam not available'
+      });
+    }
+
+    // Get all questions for this exam
+    const questions = await Question.find({ examId });
+    
+    // Calculate results
+    let totalScore = 0;
+    let totalMarks = 0;
+    const processedAnswers = [];
+
+    questions.forEach((question, index) => {
+      const userAnswer = answers[index] !== undefined ? answers[index] : -1;
+      const isCorrect = userAnswer === question.correctAnswer;
+      const marksObtained = isCorrect ? question.marks : 0;
+      
+      totalScore += marksObtained;
+      totalMarks += question.marks;
+      
+      processedAnswers.push({
+        questionId: question._id,
+        selectedAnswer: userAnswer,
+        isCorrect,
+        marksObtained
+      });
+    });
+
+    const percentage = totalMarks > 0 ? Math.round((totalScore / totalMarks) * 100) : 0;
+    const passFail = percentage >= exam.passingScore ? 'pass' : 'fail';
+
+    // Create or update applicant exam record
+    const applicantExam = await ApplicantExam.findOneAndUpdate(
+      { examId, applicantEmail },
+      {
+        answers: processedAnswers,
+        score: totalScore,
+        totalMarks,
+        percentage,
+        passFail,
+        duration,
+        status: 'evaluated',
+        endedAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Exam results submitted successfully',
+      data: {
+        score: totalScore,
+        totalMarks,
+        percentage,
+        passFail,
+        examTitle: exam.title
+      }
+    });
+  } catch (error) {
+    console.error('Error submitting secure exam results:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit exam results'
+    });
+  }
+};
+
 // @desc    Get all exams
 // @route   GET /api/admin/exams
 // @access  Private/Admin
@@ -512,9 +680,13 @@ const generateSEBConfig = async (req, res) => {
     // Generate unique exam session key
     const examSessionKey = generateExamSessionKey(examId);
 
+    const examUrl = `${frontendUrl}/secure-exam/${examId}`;
+    const examLoginUrl = `${frontendUrl}/secure-exam-login/${examId}`;
+    const examUrlRegex = `^${escapeRegex(examUrl)}(\\?.*)?$`;
+
     // Create SEB configuration
     const sebConfig = {
-      startURL: `${frontendUrl}/exam/${examId}?lockdown=true&session=${examSessionKey}`,
+      startURL: `${examLoginUrl}?lockdown=true`,
       browserViewMode: 1, // Fullscreen mode
       showTaskBar: false,
       showReloadButton: false,
@@ -530,11 +702,32 @@ const generateSEBConfig = async (req, res) => {
         {
           action: 'allow',
           active: true,
-          expression: `${frontendUrl}/exam/${examId}`,
-          regex: false
+          expression: examUrlRegex,
+          regex: true
+        },
+        {
+          action: 'allow',
+          active: true,
+          expression: `^${escapeRegex(examLoginUrl)}(\\?.*)?$`,
+          regex: true
+        },
+        {
+          action: 'allow',
+          active: true,
+          expression: `^${escapeRegex(frontendUrl)}/secure-exam-completed(\\?.*)?$`,
+          regex: true
+        },
+        {
+          action: 'allow',
+          active: true,
+          expression: `^${escapeRegex(frontendUrl)}/api/(auth/login|exams/secure/).*$`,
+          regex: true
         }
       ],
-      quitURL: `${frontendUrl}/exam-completed`,
+      quitURL: `${frontendUrl}/secure-exam-completed`,
+      quitURLConfirm: false, // Exit immediately without confirmation when quitURL is reached
+      // Legacy quit URL kept for backward compatibility
+      // legacyQuitURL: `${frontendUrl}/seb-exam-completed?lockdown=true`,
       examKey: examSessionKey
     };
 
@@ -574,6 +767,10 @@ function escapeXML(value) {
     .replace(/'/g, '&apos;');
 }
 
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function booleanXML(value) {
   return value ? '<true/>' : '<false/>';
 }
@@ -596,6 +793,7 @@ function generateSEBPlist(config) {
     `<dict>\n` +
     `  <key>startURL</key><string>${escapeXML(config.startURL)}</string>\n` +
     `  <key>quitURL</key><string>${escapeXML(config.quitURL)}</string>\n` +
+    `  <key>quitURLConfirm</key>${booleanXML(config.quitURLConfirm)}\n` +
     `  <key>browserViewMode</key><integer>${config.browserViewMode}</integer>\n` +
     `  <key>showTaskBar</key>${booleanXML(config.showTaskBar)}\n` +
     `  <key>showReloadButton</key>${booleanXML(config.showReloadButton)}\n` +
@@ -626,6 +824,9 @@ export {
   getAllPublicExams,
   getPublicExamById,
   getPublicQuestionsByExam,
+  getSecureExamById,
+  getSecureQuestionsByExam,
+  secureSubmitExamResults,
   getAllExams,
   getExamById,
   updateExam,

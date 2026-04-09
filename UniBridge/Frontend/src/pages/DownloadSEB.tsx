@@ -115,6 +115,9 @@ const DownloadSEB = () => {
                   {downloading ? "Starting..." : "Start Exam"}
                 </Button>
                 <p className="text-xs text-muted-foreground mt-2">
+                  SEB will only allow the exam page and submission screen.
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
                   If your browser does not open SEB automatically, open the downloaded .seb file from your downloads folder.
                 </p>
               </div>

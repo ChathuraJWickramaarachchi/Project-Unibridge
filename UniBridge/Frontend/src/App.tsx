@@ -8,6 +8,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Layout from "@/components/Layout";
 import OnboardingAnimation from "@/components/OnboardingAnimation";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import SecureExamProtectedRoute from "@/components/SecureExamProtectedRoute";
+import SecureExamLayout from "@/components/SecureExamLayout";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import ContactUs from "./pages/ContactUs";
@@ -16,6 +18,7 @@ import Companies from "./pages/Companies";
 import Exam from "./pages/Exam";
 import ExamList from "./pages/ExamList";
 import DownloadSEB from "./pages/DownloadSEB";
+import ExamCompleted from "./pages/ExamCompleted";
 import CVBuilder from "./pages/CVBuilder";
 import Payment from "./pages/Payment";
 import Auth from "./pages/Auth";
@@ -47,6 +50,10 @@ import CompanyExam from "./pages/CompanyManager/Exam";
 import StudentExamSchedule from "./pages/StudentExamSchedule";
 // Public Pages
 import PublicJobs from "./pages/PublicJobs";
+// Secure Exam Pages (SEB)
+import SecureExamLogin from "./pages/SecureExamLogin";
+import SecureExamPage from "./pages/SecureExamPage";
+import SecureExamCompleted from "./pages/SecureExamCompleted";
 // Password Reset
 import ResetPasswordForm from "./components/auth/ResetPasswordForm";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -55,6 +62,10 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [showOnboarding, setShowOnboarding] = useState(() => {
+    // Skip onboarding entirely when opened via SEB secure exam routes
+    if (window.location.pathname.startsWith("/secure-exam")) {
+      return false;
+    }
     // Check localStorage on initial render
     return !localStorage.getItem("hasSeenOnboarding");
   });
@@ -76,6 +87,21 @@ const App = () => {
         <BrowserRouter>
           <AuthProvider>
             <Routes>
+              {/* Secure Exam Routes (SEB) — must be before other routes */}
+              <Route path="/secure-exam-login/:examId" element={<SecureExamLogin />} />
+              <Route path="/secure-exam/:examId" element={
+                <SecureExamProtectedRoute>
+                  <SecureExamLayout>
+                    <SecureExamPage />
+                  </SecureExamLayout>
+                </SecureExamProtectedRoute>
+              } />
+              <Route path="/secure-exam-completed" element={
+                <SecureExamLayout>
+                  <SecureExamCompleted />
+                </SecureExamLayout>
+              } />
+              
               <Route path="/" element={<Layout><Index /></Layout>} />
               <Route path="/about" element={<Layout><About /></Layout>} />
               <Route path="/contact" element={<Layout><ContactUs /></Layout>} />
@@ -94,6 +120,9 @@ const App = () => {
               <Route path="/exam-list" element={<ProtectedRoute><Layout><ExamList /></Layout></ProtectedRoute>} />
               <Route path="/download-seb/:examId" element={<ProtectedRoute><Layout><DownloadSEB /></Layout></ProtectedRoute>} />
               <Route path="/exam/:examId" element={<ProtectedRoute><Layout><Exam /></Layout></ProtectedRoute>} />
+              <Route path="/seb-exam/:examId" element={<ProtectedRoute><Exam /></ProtectedRoute>} />
+              <Route path="/exam-completed" element={<ProtectedRoute><Layout><ExamCompleted /></Layout></ProtectedRoute>} />
+              <Route path="/seb-exam-completed" element={<ProtectedRoute><ExamCompleted /></ProtectedRoute>} />
               <Route path="/cv-builder" element={<ProtectedRoute><Layout><CVBuilder /></Layout></ProtectedRoute>} />
               <Route path="/payment" element={<ProtectedRoute><Layout><Payment /></Layout></ProtectedRoute>} />
               <Route path="/feedback" element={<ProtectedRoute><Layout><Feedback /></Layout></ProtectedRoute>} />

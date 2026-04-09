@@ -12,7 +12,10 @@ import {
   getPublicExamById,
   getPublicQuestionsByExam,
   submitExamResults,
-  generateSEBConfig
+  generateSEBConfig,
+  getSecureExamById,
+  getSecureQuestionsByExam,
+  secureSubmitExamResults
 } from '../controllers/examTestController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -38,6 +41,19 @@ router.post('/public/:id/submit', submitExamResults);
 // @route   GET /api/exams/:id/seb-config
 // @desc    Generate SEB configuration for exam (requires authentication)
 router.get('/:id/seb-config', protect, generateSEBConfig);
+
+// Secure exam routes (authenticated - for SEB secure exam flow)
+// @route   GET /api/exams/secure/:id
+// @desc    Get exam by ID (authenticated, for SEB)
+router.get('/secure/:id', protect, getSecureExamById);
+
+// @route   GET /api/exams/secure/:id/questions
+// @desc    Get questions for exam (authenticated, for SEB)
+router.get('/secure/:id/questions', protect, getSecureQuestionsByExam);
+
+// @route   POST /api/exams/secure/:id/submit
+// @desc    Submit exam results (authenticated, uses req.user.email)
+router.post('/secure/:id/submit', protect, secureSubmitExamResults);
 
 // All routes below are protected
 router.use(protect);
