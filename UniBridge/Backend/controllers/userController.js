@@ -1,4 +1,4 @@
-const User = require('../models/User');
+import User from '../models/User.js';
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
@@ -60,7 +60,7 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   getProfile,
   updateProfile,
 };

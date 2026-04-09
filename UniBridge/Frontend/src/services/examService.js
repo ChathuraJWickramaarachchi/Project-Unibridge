@@ -61,6 +61,41 @@ class ExamService {
     }
   }
 
+  // ==================== SECURE EXAM ENDPOINTS (SEB - Authenticated) ====================
+
+  // Get exam by ID (authenticated — for SEB secure exam flow)
+  async getSecureExamById(examId) {
+    try {
+      const response = await axios.get(`${API_URL}/secure/${examId}`, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching secure exam:', error);
+      return error.response?.data || { success: false, message: 'Failed to fetch exam' };
+    }
+  }
+
+  // Get questions by exam ID (authenticated — for SEB secure exam flow)
+  async getSecureQuestionsByExam(examId) {
+    try {
+      const response = await axios.get(`${API_URL}/secure/${examId}/questions`, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching secure questions:', error);
+      return error.response?.data || { success: false, message: 'Failed to fetch questions' };
+    }
+  }
+
+  // Submit exam results (authenticated — uses server-side user identity)
+  async submitSecureExamResults(examId, examData) {
+    try {
+      const response = await axios.post(`${API_URL}/secure/${examId}/submit`, examData, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error submitting secure exam results:', error);
+      return error.response?.data || { success: false, message: 'Failed to submit exam results' };
+    }
+  }
+
   // ==================== COMPANY/STUDENT EXAM ENDPOINTS ====================
 
   // Create a new exam schedule
@@ -294,6 +329,41 @@ class ExamService {
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
+    }
+  }
+
+  // Download SEB configuration for exam
+  async downloadSEBConfig(examId) {
+    try {
+      const response = await axios.get(
+        `${API_URL}/${examId}/seb-config`,
+        {
+          ...this.getAuthHeaders(),
+          responseType: 'arraybuffer'
+        }
+      );
+
+      const contentType = response.headers['content-type'] || '';
+      if (contentType.includes('application/json') || contentType.includes('text/html')) {
+        const text = new TextDecoder('utf-8').decode(response.data);
+        console.error('Unexpected SEB response:', text);
+        throw { message: 'Failed to download SEB configuration. The server returned an error.' };
+      }
+
+      const fileBlob = new Blob([response.data], { type: 'application/octet-stream' });
+      const url = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `exam_${examId}.seb`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error downloading SEB config:', error);
+      throw error.response?.data || error.message || { message: 'Failed to download SEB configuration' };
     }
   }
 
