@@ -1,4 +1,4 @@
-const Feedback = require('../models/Feedback');
+import Feedback from '../models/Feedback.js';
 
 // @desc    Create new feedback
 // @route   POST /api/feedback
@@ -346,7 +346,7 @@ const getFeedbackStats = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   createFeedback,
   getAllFeedback,
   getFeedbackById,

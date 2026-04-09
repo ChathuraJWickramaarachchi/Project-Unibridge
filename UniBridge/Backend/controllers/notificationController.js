@@ -1,7 +1,7 @@
-const Notification = require('../models/Notification');
+import Notification from '../models/Notification.js';
 
 // GET /api/notifications/my
-exports.getMyNotifications = async (req, res) => {
+const getMyNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
     const notifications = await Notification.find({ userId })
@@ -17,7 +17,7 @@ exports.getMyNotifications = async (req, res) => {
 };
 
 // GET /api/notifications/:userId  (admin or self)
-exports.getUserNotifications = async (req, res) => {
+const getUserNotifications = async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -38,7 +38,7 @@ exports.getUserNotifications = async (req, res) => {
 };
 
 // PUT /api/notifications/read/:id
-exports.markAsRead = async (req, res) => {
+const markAsRead = async (req, res) => {
   try {
     const notification = await Notification.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },
@@ -57,7 +57,7 @@ exports.markAsRead = async (req, res) => {
 };
 
 // PUT /api/notifications/read-all
-exports.markAllAsRead = async (req, res) => {
+const markAllAsRead = async (req, res) => {
   try {
     await Notification.updateMany({ userId: req.user.id, isRead: false }, { isRead: true });
     res.status(200).json({ success: true, message: 'All notifications marked as read' });
@@ -67,11 +67,19 @@ exports.markAllAsRead = async (req, res) => {
 };
 
 // DELETE /api/notifications/:id
-exports.deleteNotification = async (req, res) => {
+const deleteNotification = async (req, res) => {
   try {
     await Notification.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
     res.status(200).json({ success: true, message: 'Notification deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error deleting notification', error: error.message });
   }
+};
+
+export {
+  getMyNotifications,
+  getUserNotifications,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
 };

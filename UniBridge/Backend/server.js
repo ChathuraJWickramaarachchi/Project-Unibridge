@@ -1,10 +1,15 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const path = require('path');
-const passport = require('passport');
-const connectDB = require('./config/db');
-const errorHandler = require('./middleware/errorHandler');
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import passport from 'passport';
+import connectDB from './config/db.js';
+import errorHandler from './middleware/errorHandler.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 // Load env vars
 dotenv.config();
@@ -15,9 +20,10 @@ connectDB()
     console.log('✅ Database initialization complete');
   })
   .catch(err => {
-    console.error('❌ Server startup failed due to database connection error');
-    console.error('Please fix the database connection and restart the server');
-    process.exit(1);
+    console.error('❌ Database connection failed, but server will continue for testing');
+    console.error('⚠️  API endpoints requiring database will return errors');
+    console.error('🔧 Fix database connection for full functionality');
+    // Don't exit process - allow server to run for testing
   });
 
 const app = express();
@@ -52,16 +58,16 @@ app.use(cors({
 }));
 
 console.log('Loading routes...');
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const adminRoutes = require('./routes/admin');
-const feedbackRoutes = require('./routes/feedback');
-const departmentRoutes = require('./routes/departments');
-const jobRoutes = require('./routes/jobs');
-const applicationRoutes = require('./routes/applications');
-const notificationRoutes = require('./routes/notifications');
-const examRoutes = require('./routes/exams');
-const paymentRoutes = require('./routes/payments');
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
+import adminRoutes from './routes/admin.js';
+import feedbackRoutes from './routes/feedback.js';
+import departmentRoutes from './routes/departments.js';
+import jobRoutes from './routes/jobs.js';
+import applicationRoutes from './routes/applications.js';
+import notificationRoutes from './routes/notifications.js';
+import examRoutes from './routes/exams.js';
+import paymentRoutes from './routes/payments.js';
 
 console.log('Auth routes:', authRoutes);
 app.use('/api/auth', authRoutes);
@@ -116,4 +122,4 @@ process.on('unhandledRejection', (err, promise) => {
   });
 });
 
-module.exports = app;
+export default app;

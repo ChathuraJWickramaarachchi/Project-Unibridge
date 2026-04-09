@@ -1,10 +1,10 @@
-const Payment = require('../models/Payment');
-const User = require('../models/User');
+import Payment from '../models/Payment.js';
+import User from '../models/User.js';
 
 // @desc    Process payment and save details
 // @route   POST /api/payments/process
 // @access  Private
-exports.processPayment = async (req, res) => {
+const processPayment = async (req, res) => {
   try {
     const {
       cvData,
@@ -39,7 +39,7 @@ exports.processPayment = async (req, res) => {
     const userId = req.user.id;
     
     // Convert string userId to ObjectId if needed
-    const { ObjectId } = require('mongoose').Types;
+    const { ObjectId } = (await import('mongoose')).Types;
     const userIdObjectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
 
     // Validate card details if payment method is card
@@ -116,7 +116,7 @@ exports.processPayment = async (req, res) => {
 // @desc    Get payment details by ID
 // @route   GET /api/payments/:id
 // @access  Private
-exports.getPaymentById = async (req, res) => {
+const getPaymentById = async (req, res) => {
   try {
     const payment = await Payment.findOne({
       _id: req.params.id,
@@ -147,7 +147,7 @@ exports.getPaymentById = async (req, res) => {
 // @desc    Get all payments for a user
 // @route   GET /api/payments
 // @access  Private
-exports.getUserPayments = async (req, res) => {
+const getUserPayments = async (req, res) => {
   try {
     const payments = await Payment.find({ userId: req.user.id })
       .sort({ createdAt: -1 })
@@ -171,7 +171,7 @@ exports.getUserPayments = async (req, res) => {
 // @desc    Download CV file
 // @route   GET /api/payments/download/:id
 // @access  Private
-exports.downloadCV = async (req, res) => {
+const downloadCV = async (req, res) => {
   try {
     const payment = await Payment.findOne({
       _id: req.params.id,
@@ -233,7 +233,7 @@ Transaction ID: ${payment.paymentDetails.transactionId}
 // @desc    Get payment statistics (admin)
 // @route   GET /api/payments/stats
 // @access  Private/Admin
-exports.getPaymentStats = async (req, res) => {
+const getPaymentStats = async (req, res) => {
   try {
     const totalPayments = await Payment.countDocuments();
     const completedPayments = await Payment.countDocuments({ 'paymentDetails.paymentStatus': 'completed' });
@@ -266,4 +266,12 @@ exports.getPaymentStats = async (req, res) => {
       error: error.message
     });
   }
+};
+
+export {
+  processPayment,
+  getPaymentById,
+  getUserPayments,
+  downloadCV,
+  getPaymentStats
 };

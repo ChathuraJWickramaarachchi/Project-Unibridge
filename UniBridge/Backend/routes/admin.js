@@ -1,34 +1,34 @@
-const express = require('express');
-const {
+import express from 'express';
+import {
   getAllUsers,
   getUserById,
   updateUser,
   deleteUser,
   getDashboardStats,
   verifyUser,
-} = require('../controllers/adminController');
-const {
+} from '../controllers/adminController.js';
+import {
   createExam,
   getAllExams,
   getExamById,
   updateExam,
   deleteExam
-} = require('../controllers/examTestController');
-const {
+} from '../controllers/examTestController.js';
+import {
   addQuestion,
   getQuestionsByExam,
   getAllQuestions,
   getQuestionById,
   updateQuestion,
   deleteQuestion
-} = require('../controllers/questionController');
-const {
+} from '../controllers/questionController.js';
+import {
   getAllResults,
   getResultsByExam,
   getResultDetails,
   getResultsStatistics
-} = require('../controllers/resultsController');
-const { protect, authorize } = require('../middleware/auth');
+} from '../controllers/resultsController.js';
+import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -67,4 +67,4 @@ router.get('/results/:examId/:email', getResultDetails);
 router.get('/results/:examId', getResultsByExam);
 router.get('/results', getAllResults);
 
-module.exports = router;
+export default router;

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const applicationSchema = new mongoose.Schema(
   {
@@ -69,4 +69,4 @@ const applicationSchema = new mongoose.Schema(
 // Prevent duplicate applications
 applicationSchema.index({ studentId: 1, jobId: 1 }, { unique: true });
 
-module.exports = mongoose.model('Application', applicationSchema);
+export default mongoose.model('Application', applicationSchema);

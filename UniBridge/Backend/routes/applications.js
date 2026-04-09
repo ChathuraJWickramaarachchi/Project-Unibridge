@@ -1,16 +1,19 @@
-const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const { protect, authorize } = require('../middleware/auth');
-const {
+import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { protect, authorize } from '../middleware/auth.js';
+import {
   submitApplication,
   getStudentApplications,
   getMyApplications,
   getJobApplications,
   updateApplicationStatus,
-} = require('../controllers/applicationController');
+} from '../controllers/applicationController.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Ensure uploads directory exists
 const uploadDir = path.join(__dirname, '..', 'uploads', 'resumes');
@@ -41,6 +44,8 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
+const router = express.Router();
+
 // All routes require authentication
 router.use(protect);
 
@@ -59,4 +64,4 @@ router.get('/job/:jobId', authorize('employer', 'admin'), getJobApplications);
 // PUT /api/applications/:id/status  (employer/admin)
 router.put('/:id/status', authorize('employer', 'admin'), updateApplicationStatus);
 
-module.exports = router;
+export default router;

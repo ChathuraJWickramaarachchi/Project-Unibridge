@@ -1,7 +1,6 @@
-const express = require('express');
-const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
-const {
+import express from 'express';
+import { protect, authorize } from '../middleware/auth.js';
+import {
   createJob,
   getJobs,
   getPublicJobs,
@@ -10,7 +9,9 @@ const {
   deleteJob,
   getJobStats,
   applyForJob
-} = require('../controllers/jobController');
+} from '../controllers/jobController.js';
+
+const router = express.Router();
 
 router.get('/public', getPublicJobs);
 router.get('/public/:id', getJobById);
@@ -32,4 +33,4 @@ router
   .put(authorize('employer', 'admin'), updateJob)
   .delete(authorize('employer', 'admin'), deleteJob);
 
-module.exports = router;
+export default router;

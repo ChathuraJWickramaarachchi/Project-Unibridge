@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 
 const MAX_JOBS_PER_TYPE = 10;
 
-exports.createJob = async (req, res) => {
+const createJob = async (req, res) => {
   try {
     const {
       title,
@@ -76,7 +76,7 @@ exports.createJob = async (req, res) => {
   }
 };
 
-exports.getJobs = async (req, res) => {
+const getJobs = async (req, res) => {
   try {
     const { department, type, search, status } = req.query;
     const companyId = req.user?.id;
@@ -132,7 +132,7 @@ exports.getJobs = async (req, res) => {
   }
 };
 
-exports.getPublicJobs = async (req, res) => {
+const getPublicJobs = async (req, res) => {
   try {
     const { department, type, search } = req.query;
 
@@ -175,7 +175,7 @@ exports.getPublicJobs = async (req, res) => {
   }
 };
 
-exports.getJobById = async (req, res) => {
+const getJobById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -204,7 +204,7 @@ exports.getJobById = async (req, res) => {
   }
 };
 
-exports.updateJob = async (req, res) => {
+const updateJob = async (req, res) => {
   try {
     const { id } = req.params;
     const companyId = req.user.id;
@@ -252,7 +252,7 @@ exports.updateJob = async (req, res) => {
   }
 };
 
-exports.deleteJob = async (req, res) => {
+const deleteJob = async (req, res) => {
   try {
     const { id } = req.params;
     const companyId = req.user.id;
@@ -279,7 +279,7 @@ exports.deleteJob = async (req, res) => {
   }
 };
 
-exports.getJobStats = async (req, res) => {
+const getJobStats = async (req, res) => {
   try {
     const companyId = req.user.id;
 
@@ -331,7 +331,7 @@ exports.getJobStats = async (req, res) => {
   }
 };
 
-exports.applyForJob = async (req, res) => {
+const applyForJob = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -373,4 +373,15 @@ exports.applyForJob = async (req, res) => {
       error: error.message
     });
   }
+};
+
+export {
+  createJob,
+  getJobs,
+  getPublicJobs,
+  getJobById,
+  updateJob,
+  deleteJob,
+  getJobStats,
+  applyForJob
 };

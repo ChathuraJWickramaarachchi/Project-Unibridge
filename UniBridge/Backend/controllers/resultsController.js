@@ -1,10 +1,10 @@
-const ApplicantExam = require('../models/ApplicantExam');
-const ExamTest = require('../models/ExamTest');
+import ApplicantExam from '../models/ApplicantExam.js';
+import ExamTest from '../models/ExamTest.js';
 
 // @desc    Get all applicant exam results
 // @route   GET /api/admin/results
 // @access  Private/Admin
-exports.getAllResults = async (req, res) => {
+const getAllResults = async (req, res) => {
   try {
     const results = await ApplicantExam.find()
       .populate('examId', 'title timeLimit passingScore')
@@ -43,7 +43,7 @@ exports.getAllResults = async (req, res) => {
 // @desc    Get results for a specific exam
 // @route   GET /api/admin/results/:examId
 // @access  Private/Admin
-exports.getResultsByExam = async (req, res) => {
+const getResultsByExam = async (req, res) => {
   try {
     const { examId } = req.params;
 
@@ -94,7 +94,7 @@ exports.getResultsByExam = async (req, res) => {
 // @desc    Get result details for specific applicant
 // @route   GET /api/admin/results/:examId/:email
 // @access  Private/Admin
-exports.getResultDetails = async (req, res) => {
+const getResultDetails = async (req, res) => {
   try {
     const { examId, email } = req.params;
 
@@ -128,7 +128,7 @@ exports.getResultDetails = async (req, res) => {
 // @desc    Get summary statistics for results
 // @route   GET /api/admin/results/stats/summary
 // @access  Private/Admin
-exports.getResultsStatistics = async (req, res) => {
+const getResultsStatistics = async (req, res) => {
   try {
     const totalAttempts = await ApplicantExam.countDocuments();
     const passedAttempts = await ApplicantExam.countDocuments({ passFail: 'pass' });
@@ -174,4 +174,11 @@ exports.getResultsStatistics = async (req, res) => {
       error: error.message
     });
   }
+};
+
+export {
+  getAllResults,
+  getResultsByExam,
+  getResultDetails,
+  getResultsStatistics
 };
