@@ -20,7 +20,9 @@ class PaymentService {
       const response = await axios.post(`${API_BASE_URL}/process`, paymentData, getAuthHeaders());
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Failed to process payment' };
+      console.error('Payment service error:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to process payment';
+      throw { message: errorMessage, details: error.response?.data };
     }
   }
 
@@ -44,18 +46,61 @@ class PaymentService {
     }
   }
 
-  // Download CV file
+  // Download CV file - rebuilt from scratch
   async downloadCV(paymentId) {
     try {
       const response = await axios.get(`${API_BASE_URL}/download/${paymentId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        responseType: 'blob'
+        responseType: 'blob',
+        timeout: 30000 // 30 second timeout
       });
+      
+      // Verify response
+      if (!response.data) {
+        throw new Error('No data received from server');
+      }
+      
+      // Check if response is actually a PDF
+      const contentType = response.headers['content-type'];
+      if (!contentType || !contentType.includes('application/pdf')) {
+        console.warn('Unexpected content type:', contentType);
+      }
+      
+      // Log response details for debugging
+      console.log('PDF download response:', {
+        status: response.status,
+        contentType: response.headers['content-type'],
+        contentDisposition: response.headers['content-disposition'],
+        dataSize: response.data.size || response.data.length || 'unknown'
+      });
+      
       return response;
+      
     } catch (error) {
-      throw error.response?.data || { message: 'Failed to download CV' };
+      console.error('Payment service download error:', error);
+      
+      // Handle different error types
+      if (error.code === 'ECONNABORTED') {
+        throw { message: 'Download timeout. Please try again.' };
+      }
+      
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.message || error.response.data?.error || 'Download failed';
+        throw { 
+          message: errorMessage,
+          status: error.response.status,
+          details: error.response.data 
+        };
+      }
+      
+      // Network or other error
+      throw { 
+        message: 'Network error during download. Please check your connection and try again.',
+        originalError: error.message 
+      };
     }
   }
 
