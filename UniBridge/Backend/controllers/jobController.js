@@ -1,6 +1,6 @@
-const Job = require('../models/Job');
-const Department = require('../models/Department');
-const mongoose = require('mongoose');
+import Job from '../models/Job.js';
+import Department from '../models/Department.js';
+import mongoose from 'mongoose';
 
 const MAX_JOBS_PER_TYPE = 10;
 

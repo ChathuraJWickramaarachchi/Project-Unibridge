@@ -733,8 +733,7 @@ const generateSEBConfig = async (req, res) => {
 
     // Generate plist XML content for .seb file
     const sebPlist = generateSEBPlist(sebConfig);
-    const gzippedSeb = zlib.gzipSync(Buffer.from(sebPlist, 'utf8'));
-    const sebBuffer = Buffer.concat([Buffer.from('plnd'), gzippedSeb]);
+    const sebBuffer = zlib.gzipSync(Buffer.from(sebPlist, 'utf8'));
 
     // Set headers for file download
     res.setHeader('Content-Type', 'application/octet-stream');

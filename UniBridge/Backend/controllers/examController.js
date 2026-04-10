@@ -1,8 +1,8 @@
-const Exam = require('../models/Exam');
-const Job = require('../models/Job');
-const User = require('../models/User');
-const Notification = require('../models/Notification');
-const Application = require('../models/Application');
+import Exam from '../models/Exam.js';
+import Job from '../models/Job.js';
+import User from '../models/User.js';
+import Notification from '../models/Notification.js';
+import Application from '../models/Application.js';
 
 // @desc    Create a new exam schedule
 // @route   POST /api/exams

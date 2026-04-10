@@ -1,5 +1,6 @@
 import Payment from '../models/Payment.js';
 import User from '../models/User.js';
+import PDFDocument from 'pdfkit';
 
 // @desc    Process payment and save details
 // @route   POST /api/payments/process
@@ -210,7 +211,6 @@ const downloadCV = async (req, res) => {
     console.log('Starting PDF generation with PDFKit...');
     
     try {
-      const PDFDocument = require('pdfkit');
       const doc = new PDFDocument({ margin: 50, size: 'A4' });
       
       let buffers = [];

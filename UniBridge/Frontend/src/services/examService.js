@@ -96,6 +96,33 @@ class ExamService {
     }
   }
 
+  // Download SEB configuration file for an exam
+  async downloadSEBConfig(examId) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/${examId}/seb-config`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob',
+      });
+
+      // Create a temporary <a> tag to trigger the file download
+      const blob = new Blob([response.data], { type: 'application/octet-stream' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `exam_${examId}.seb`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error downloading SEB config:', error);
+      return { success: false, message: 'Failed to download SEB configuration' };
+    }
+  }
+
   // ==================== COMPANY/STUDENT EXAM ENDPOINTS ====================
 
   // Create a new exam schedule
