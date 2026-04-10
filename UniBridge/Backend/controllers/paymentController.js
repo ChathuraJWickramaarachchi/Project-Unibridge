@@ -36,11 +36,7 @@ const processPayment = async (req, res) => {
     }
 
     // Get user ID from authenticated user
-    const userId = req.user.id;
-    
-    // Convert string userId to ObjectId if needed
-    const { ObjectId } = (await import('mongoose')).Types;
-    const userIdObjectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
+    const userId = req.user._id; // Use _id since user comes from database
 
     // Validate card details if payment method is card
     let cardLastFour = null;
@@ -55,9 +51,12 @@ const processPayment = async (req, res) => {
       cardLastFour = cardNumber.slice(-4);
     }
 
+    // Generate unique transaction ID
+    const transactionId = 'TXN_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+
     // Create payment record
     const payment = new Payment({
-      userId: userIdObjectId,
+      userId: userId,
       cvData: cvData,
       paymentDetails: {
         amount: amount,
@@ -65,33 +64,20 @@ const processPayment = async (req, res) => {
         paymentMethod: paymentMethod,
         paymentStatus: 'processing',
         cardLastFour: cardLastFour,
-        paymentProvider: 'stripe'
+        paymentProvider: 'stripe',
+        transactionId: transactionId
+      },
+      downloadInfo: {
+        downloadCount: 0,
+        lastDownloadedAt: null,
+        downloadUrl: null
       }
     });
 
-    // Simulate payment processing (in production, integrate with Stripe/PayPal)
-    setTimeout(async () => {
-      try {
-        // Update payment status to completed
-        payment.paymentDetails.paymentStatus = 'completed';
-        payment.updatedAt = new Date();
-        
-        // Generate download URL (in production, this would be a secure temporary URL)
-        const downloadUrl = `/api/payments/download/${payment._id}`;
-        payment.downloadInfo.downloadUrl = downloadUrl;
-        
-        await payment.save();
-        
-        console.log(`Payment completed: ${payment.paymentDetails.transactionId}`);
-      } catch (error) {
-        console.error('Error updating payment status:', error);
-        payment.paymentDetails.paymentStatus = 'failed';
-        await payment.save();
-      }
-    }, 2000); // Simulate 2 second processing time
-
+    // Save payment record first
     await payment.save();
 
+    // Send immediate response
     res.status(200).json({
       success: true,
       message: 'Payment processing initiated',
@@ -103,6 +89,35 @@ const processPayment = async (req, res) => {
         cvData: payment.cvData
       }
     });
+
+    // Simulate payment processing in background (in production, integrate with Stripe/PayPal)
+    setTimeout(async () => {
+      try {
+        // Find the payment again to avoid parallel save issues
+        const updatedPayment = await Payment.findById(payment._id);
+        
+        // Update payment status to completed
+        updatedPayment.paymentDetails.paymentStatus = 'completed';
+        updatedPayment.updatedAt = new Date();
+        
+        // Generate download URL (in production, this would be a secure temporary URL)
+        const downloadUrl = `/api/payments/download/${updatedPayment._id}`;
+        updatedPayment.downloadInfo.downloadUrl = downloadUrl;
+        
+        await updatedPayment.save();
+        
+        console.log(`Payment completed: ${updatedPayment.paymentDetails.transactionId}`);
+      } catch (error) {
+        console.error('Error updating payment status:', error);
+        try {
+          const failedPayment = await Payment.findById(payment._id);
+          failedPayment.paymentDetails.paymentStatus = 'failed';
+          await failedPayment.save();
+        } catch (updateError) {
+          console.error('Error updating payment to failed status:', updateError);
+        }
+      }
+    }, 2000); // Simulate 2 second processing time
   } catch (error) {
     console.error('Error processing payment:', error);
     res.status(500).json({
@@ -120,7 +135,7 @@ const getPaymentById = async (req, res) => {
   try {
     const payment = await Payment.findOne({
       _id: req.params.id,
-      userId: req.user.id
+      userId: req.user._id
     }).populate('userId', 'name email');
 
     if (!payment) {
@@ -175,7 +190,7 @@ const downloadCV = async (req, res) => {
   try {
     const payment = await Payment.findOne({
       _id: req.params.id,
-      userId: req.user.id,
+      userId: req.user._id,
       'paymentDetails.paymentStatus': 'completed'
     });
 
@@ -191,8 +206,89 @@ const downloadCV = async (req, res) => {
     payment.downloadInfo.lastDownloadedAt = new Date();
     await payment.save();
 
-    // Generate CV content
-    const cvContent = `
+    // Generate CV PDF using pdfkit (more robust for Node.js)
+    console.log('Starting PDF generation with PDFKit...');
+    
+    try {
+      const PDFDocument = require('pdfkit');
+      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      
+      let buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(buffers);
+        
+        // Set proper headers for binary file download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${(payment.cvData.fullName || 'Unknown').replace(/[^a-zA-Z0-9]/g, '_')}_CV.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Pragma', 'no-cache');
+        
+        console.log('Sending PDF as binary stream...');
+        res.end(pdfBuffer);
+      });
+      
+      // Build the PDF content
+      doc.fontSize(20).font('Helvetica-Bold').text('CURRICULUM VITAE', { align: 'center' });
+      doc.moveDown(1.5);
+      
+      const addSection = (title, content) => {
+        if (content && content.trim()) {
+          doc.fontSize(14).font('Helvetica-Bold').text(title);
+          doc.moveDown(0.5);
+          doc.fontSize(12).font('Helvetica').text(content, { align: 'justify' });
+          doc.moveDown(1.5);
+        }
+      };
+
+      doc.fontSize(14).font('Helvetica-Bold').text('PERSONAL INFORMATION');
+      doc.moveDown(0.5);
+      doc.fontSize(12).font('Helvetica');
+      doc.text(`Name: ${payment.cvData.fullName || ''}`);
+      doc.text(`Email: ${payment.cvData.email || ''}`);
+      doc.text(`Phone: ${payment.cvData.phone || ''}`);
+      doc.text(`Address: ${payment.cvData.address || ''}`);
+      doc.moveDown(1.5);
+      
+      addSection('CAREER OBJECTIVE', payment.cvData.careerObjective);
+      addSection('EDUCATION', payment.cvData.education);
+      addSection('SKILLS', payment.cvData.skills);
+      addSection('EXPERIENCE', payment.cvData.experience);
+      addSection('CERTIFICATIONS', payment.cvData.certifications);
+      addSection('LANGUAGES', payment.cvData.languages);
+      
+      // Footer
+      doc.moveDown(2);
+      doc.fontSize(10).font('Helvetica-Oblique');
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`);
+      doc.text(`Transaction ID: ${payment.paymentDetails.transactionId}`);
+      
+      // Finalize document
+      doc.end();
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      // Fallback to text generation if PDF fails
+      console.log('Falling back to text generation...');
+      return generateTextCV(res, payment);
+    }
+  } catch (error) {
+    console.error('Error downloading CV:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download CV',
+      error: error.message
+    });
+  }
+};
+
+// Fallback text generation function
+const generateTextCV = (res, payment) => {
+  console.log('Generating text CV as fallback...');
+  
+  // Generate CV content
+  const cvContent = `
 CURRICULUM VITAE
 
 Personal Information:
@@ -213,21 +309,13 @@ ${payment.cvData.experience}
 ---
 Generated on: ${new Date().toLocaleDateString()}
 Transaction ID: ${payment.paymentDetails.transactionId}
-    `.trim();
+  `.trim();
 
-    // Set headers for file download
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Disposition', `attachment; filename="${payment.cvData.fullName.replace(/\s+/g, '_')}_CV.txt"`);
-    
-    res.send(cvContent);
-  } catch (error) {
-    console.error('Error downloading CV:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to download CV',
-      error: error.message
-    });
-  }
+  // Set headers for file download
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Content-Disposition', `attachment; filename="${payment.cvData.fullName.replace(/\s+/g, '_')}_CV.txt"`);
+  
+  res.send(cvContent);
 };
 
 // @desc    Get payment statistics (admin)
