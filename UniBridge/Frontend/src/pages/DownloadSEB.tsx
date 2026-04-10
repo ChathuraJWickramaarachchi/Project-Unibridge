@@ -17,6 +17,7 @@ const DownloadSEB = () => {
     if (!examId) return false;
 
     try {
+      console.log('🚀 Initiating SEB config download for ID:', examId);
       setDownloading(true);
       const response = await examService.downloadSEBConfig(examId);
 

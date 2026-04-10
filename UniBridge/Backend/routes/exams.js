@@ -21,6 +21,16 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
+console.log('🛣️  Exam Routes Initialized');
+
+// Middleware to log all requests to this router
+router.use((req, res, next) => {
+  if (req.url.includes('seb-config')) {
+    console.log('🎯 Hit SEB Config Route:', req.url);
+  }
+  next();
+});
+
 // Public routes (no authentication required)
 // @route   GET /api/exams/public
 // @desc    Get all active exams (public access)

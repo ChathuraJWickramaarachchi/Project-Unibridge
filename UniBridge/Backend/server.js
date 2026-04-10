@@ -69,7 +69,6 @@ import notificationRoutes from './routes/notifications.js';
 import examRoutes from './routes/exams.js';
 import paymentRoutes from './routes/payments.js';
 
-console.log('Auth routes:', authRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);

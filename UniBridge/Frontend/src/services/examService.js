@@ -347,7 +347,15 @@ class ExamService {
       if (contentType.includes('application/json') || contentType.includes('text/html')) {
         const text = new TextDecoder('utf-8').decode(response.data);
         console.error('Unexpected SEB response:', text);
-        throw { message: 'Failed to download SEB configuration. The server returned an error.' };
+        let errorMessage = 'Failed to download SEB configuration.';
+        try {
+          const json = JSON.parse(text);
+          if (json.message) errorMessage = json.message;
+        } catch (e) {
+          // Not JSON
+          if (text.length < 100) errorMessage += ' Server returned: ' + text;
+        }
+        throw { message: errorMessage };
       }
 
       const fileBlob = new Blob([response.data], { type: 'application/octet-stream' });
@@ -363,6 +371,19 @@ class ExamService {
       return { success: true };
     } catch (error) {
       console.error('Error downloading SEB config:', error);
+      
+      // If error.response.data exists and is an ArrayBuffer, we need to decode it
+      if (error.response?.data instanceof ArrayBuffer) {
+        try {
+          const text = new TextDecoder('utf-8').decode(error.response.data);
+          const json = JSON.parse(text);
+          if (json.message) throw { success: false, message: json.message };
+        } catch (e) {
+          // If we already threw our custom message, re-throw it
+          if (e.message) throw e;
+        }
+      }
+      
       throw error.response?.data || error.message || { message: 'Failed to download SEB configuration' };
     }
   }

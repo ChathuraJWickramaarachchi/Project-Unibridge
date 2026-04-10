@@ -1,6 +1,9 @@
-import zlib from 'zlib';
+import { gzipSync } from 'node:zlib';
 import ExamTest from '../models/ExamTest.js';
+import Exam from '../models/Exam.js';
 import Question from '../models/Question.js';
+import ApplicantExam from '../models/ApplicantExam.js';
+import { Buffer } from 'node:buffer';
 
 // @desc    Create a new exam
 // @route   POST /api/admin/exams
@@ -38,8 +41,6 @@ const createExam = async (req, res) => {
     });
   }
 };
-
-import ApplicantExam from '../models/ApplicantExam.js';
 
 // @desc    Submit exam results (public)
 // @route   POST /api/exams/public/:id/submit
@@ -652,22 +653,33 @@ const deleteExam = async (req, res) => {
 // @route   GET /api/exams/:id/seb-config
 // @access  Public (but requires authentication for security)
 const generateSEBConfig = async (req, res) => {
+  const { id: examId } = req.params;
+  console.log('📥 SEB Config Request for Exam ID:', examId);
+  
   try {
-    const { id: examId } = req.params;
 
-    // Verify exam exists and is active
-    const exam = await ExamTest.findById(examId);
+    // Verify exam exists and is active (Check both collections to be safe)
+    let exam = await ExamTest.findById(examId);
     if (!exam) {
+      console.log('🔍 Exam not found in ExamTest, checking Exam collection...');
+      exam = await Exam.findById(examId);
+    }
+
+    if (!exam) {
+      console.warn('⚠️ Exam not found in database:', examId);
       return res.status(404).json({
         success: false,
         message: 'Exam not found'
       });
     }
 
-    if (exam.status !== 'active') {
-      return res.status(404).json({
+    // Standardize status check (ExamTest uses 'active', Exam might use 'Scheduled' or similar)
+    const isActive = exam.status === 'active' || exam.status === 'Scheduled';
+    if (!isActive) {
+      console.warn('⚠️ Exam is not available:', examId, 'Status:', exam.status);
+      return res.status(400).json({
         success: false,
-        message: 'Exam not available'
+        message: 'Exam is not currently available for secure testing'
       });
     }
 
@@ -732,9 +744,12 @@ const generateSEBConfig = async (req, res) => {
     };
 
     // Generate plist XML content for .seb file
+    console.log('📝 Generating SEB Plist for:', exam.title || 'Untitled Exam');
     const sebPlist = generateSEBPlist(sebConfig);
-    const gzippedSeb = zlib.gzipSync(Buffer.from(sebPlist, 'utf8'));
-    const sebBuffer = Buffer.concat([Buffer.from('plnd'), gzippedSeb]);
+    const gzippedSeb = gzipSync(Buffer.from(sebPlist, 'utf8'));
+    const sebBuffer = Buffer.concat([Buffer.from([0x70, 0x6C, 0x6E, 0x64]), gzippedSeb]);
+    console.log('✅ SEB Buffer generated, size:', sebBuffer.length);
+    console.log('📤 Sending SEB configuration file for exam:', exam.title);
 
     // Set headers for file download
     res.setHeader('Content-Type', 'application/octet-stream');
@@ -743,10 +758,10 @@ const generateSEBConfig = async (req, res) => {
 
     res.send(sebBuffer);
   } catch (error) {
-    console.error('Error generating SEB config:', error);
+    console.error('❌ SEB Config Generation Error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error generating SEB configuration'
+      message: 'Error generating SEB configuration: ' + error.message
     });
   }
 };
@@ -811,6 +826,7 @@ function generateSEBPlist(config) {
     `  </array>\n` +
     `  <key>browserWindowWebView</key><integer>3</integer>\n` +
     `  <key>URLFilterEnableContentFilter</key><false/>\n` +
+    `  <key>examKey</key><string>${escapeXML(config.examKey || '')}</string>\n` +
     `</dict>\n` +
     `</plist>`;
 }

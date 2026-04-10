@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import { verifyToken } from '../config/jwt.js';
 
 const protect = async (req, res, next) => {
+  console.log('🔒 Auth Check for:', req.method, req.originalUrl);
   let token;
 
   if (
@@ -26,6 +27,7 @@ const protect = async (req, res, next) => {
         });
       }
 
+      console.log('✅ Auth Success - User identified:', req.user.email);
       next();
     } catch (error) {
       console.error('Token verification error:', error);
@@ -35,6 +37,7 @@ const protect = async (req, res, next) => {
       });
     }
   } else {
+    console.warn('🚫 No token provided for:', req.originalUrl);
     return res.status(401).json({
       success: false,
       error: 'Not authorized, no token',
