@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,8 +24,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
+import { applicationService } from "@/services/applicationService";
 
 interface Job {
   _id: string;
@@ -74,9 +72,13 @@ export default function ApplyModal({ job, open, onClose, onSuccess }: ApplyModal
   // Reset on close
   useEffect(() => {
     if (!open) {
-      setSubmitted(false);
-      setCvFile(null);
-      setForm({ fullName: "", email: "", contactNumber: "", university: "", coverLetter: "" });
+      // small delay prevents flicker if success screen was showing
+      const t = setTimeout(() => {
+        setSubmitted(false);
+        setCvFile(null);
+        setForm({ fullName: "", email: "", contactNumber: "", university: "", coverLetter: "" });
+      }, 300);
+      return () => clearTimeout(t);
     }
   }, [open]);
 
@@ -109,7 +111,6 @@ export default function ApplyModal({ job, open, onClose, onSuccess }: ApplyModal
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem("token");
 
       const formData = new FormData();
       formData.append("jobId", job._id);
@@ -120,17 +121,14 @@ export default function ApplyModal({ job, open, onClose, onSuccess }: ApplyModal
       formData.append("coverLetter", form.coverLetter);
       if (cvFile) formData.append("resume", cvFile);
 
-      await axios.post(`${API_URL}/applications`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      await applicationService.submit(formData);
 
       setSubmitted(true);
       onSuccess?.();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to submit application");
+      const msg = err.response?.data?.message || err.message || "Failed to submit application";
+      console.error("Application submit error:", err.response?.data || err);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }

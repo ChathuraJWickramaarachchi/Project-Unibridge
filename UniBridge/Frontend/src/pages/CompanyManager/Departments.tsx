@@ -96,6 +96,7 @@ const Departments = () => {
     description: "",
     isActive: true,
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const fetchDepartments = async () => {
     try {
@@ -116,12 +117,18 @@ const Departments = () => {
   }, []);
 
   const handleCreate = async () => {
+    const errors: Record<string, string> = {};
+    if (!formData.name) errors.name = "Please select a department";
+    if (!formData.description.trim()) errors.description = "Description is required";
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     try {
       const response = await departmentService.createDepartment(formData);
       if (response.success) {
         toast.success("Department created successfully");
         setIsAddDialogOpen(false);
         setFormData({ name: "", description: "", isActive: true });
+        setFormErrors({});
         fetchDepartments();
       }
     } catch (error: any) {
@@ -131,6 +138,10 @@ const Departments = () => {
 
   const handleUpdate = async () => {
     if (!selectedDepartment) return;
+    const errors: Record<string, string> = {};
+    if (!formData.description.trim()) errors.editDescription = "Description is required";
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     try {
       const response = await departmentService.updateDepartment(selectedDepartment._id, {
         description: formData.description,
@@ -227,14 +238,15 @@ const Departments = () => {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Department Name</Label>
+                <Label htmlFor="name">Department Name <span className="text-destructive">*</span></Label>
                 <Select
                   value={formData.name}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, name: value })
-                  }
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, name: value });
+                    setFormErrors((prev) => ({ ...prev, name: "" }));
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={formErrors.name ? "border-destructive" : ""}>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
@@ -248,25 +260,29 @@ const Departments = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                {formErrors.name && <p className="text-xs text-destructive">{formErrors.name}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">Description <span className="text-destructive">*</span></Label>
                 <Textarea
                   id="description"
                   placeholder="Enter department description..."
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                  className={formErrors.description ? "border-destructive focus-visible:ring-destructive" : ""}
+                  onChange={(e) => {
+                    setFormData({ ...formData, description: e.target.value });
+                    if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, description: "" }));
+                  }}
                   rows={4}
                 />
+                {formErrors.description && <p className="text-xs text-destructive">{formErrors.description}</p>}
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreate} disabled={!formData.name || !formData.description}>
+              <Button onClick={handleCreate}>
                 Create Department
               </Button>
             </DialogFooter>
@@ -449,15 +465,18 @@ const Departments = () => {
               <Input value={formData.name} disabled className="bg-muted" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="edit-description">Description <span className="text-destructive">*</span></Label>
               <Textarea
                 id="edit-description"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                className={formErrors.editDescription ? "border-destructive focus-visible:ring-destructive" : ""}
+                onChange={(e) => {
+                  setFormData({ ...formData, description: e.target.value });
+                  if (e.target.value.trim()) setFormErrors((prev) => ({ ...prev, editDescription: "" }));
+                }}
                 rows={4}
               />
+              {formErrors.editDescription && <p className="text-xs text-destructive">{formErrors.editDescription}</p>}
             </div>
             <div className="flex items-center justify-between">
               <Label htmlFor="active-status">Active Status</Label>

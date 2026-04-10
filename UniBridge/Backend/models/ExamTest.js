@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const examTestSchema = new mongoose.Schema(
   {
@@ -50,4 +50,4 @@ examTestSchema.virtual('questionCount').get(function() {
   return this._questionCount || 0;
 });
 
-module.exports = mongoose.model('ExamTest', examTestSchema);
+export default mongoose.model('ExamTest', examTestSchema);

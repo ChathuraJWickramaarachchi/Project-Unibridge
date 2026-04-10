@@ -61,6 +61,41 @@ class ExamService {
     }
   }
 
+  // ==================== SECURE EXAM ENDPOINTS (SEB - Authenticated) ====================
+
+  // Get exam by ID (authenticated — for SEB secure exam flow)
+  async getSecureExamById(examId) {
+    try {
+      const response = await axios.get(`${API_URL}/secure/${examId}`, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching secure exam:', error);
+      return error.response?.data || { success: false, message: 'Failed to fetch exam' };
+    }
+  }
+
+  // Get questions by exam ID (authenticated — for SEB secure exam flow)
+  async getSecureQuestionsByExam(examId) {
+    try {
+      const response = await axios.get(`${API_URL}/secure/${examId}/questions`, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching secure questions:', error);
+      return error.response?.data || { success: false, message: 'Failed to fetch questions' };
+    }
+  }
+
+  // Submit exam results (authenticated — uses server-side user identity)
+  async submitSecureExamResults(examId, examData) {
+    try {
+      const response = await axios.post(`${API_URL}/secure/${examId}/submit`, examData, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error submitting secure exam results:', error);
+      return error.response?.data || { success: false, message: 'Failed to submit exam results' };
+    }
+  }
+
   // ==================== COMPANY/STUDENT EXAM ENDPOINTS ====================
 
   // Create a new exam schedule
@@ -297,32 +332,6 @@ class ExamService {
     }
   }
 
-  // ==================== CONVENIENCE ALIASES FOR ADMIN COMPONENTS ====================
-
-  // Alias for admin exam creation
-  async createExam(examData) {
-    return this.createAdminExam(examData);
-  }
-
-  // Alias for getting all exams (admin)
-  async getAllExams() {
-    return this.getAllAdminExams();
-  }
-
-  // Alias for getting exam by ID (admin)
-  async getExamById(examId) {
-    return this.getAdminExamById(examId);
-  }
-
-  // Alias for updating exam (admin)
-  async updateExam(examId, examData) {
-    return this.updateAdminExam(examId, examData);
-  }
-
-  // Alias for deleting exam (admin)
-  async deleteExam(examId) {
-    return this.deleteAdminExam(examId);
-  }
 }
 
 export default new ExamService();

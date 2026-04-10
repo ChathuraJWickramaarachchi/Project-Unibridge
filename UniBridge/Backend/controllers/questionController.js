@@ -1,10 +1,10 @@
-const Question = require('../models/Question');
-const ExamTest = require('../models/ExamTest');
+import Question from '../models/Question.js';
+import ExamTest from '../models/ExamTest.js';
 
 // @desc    Add question to an exam
 // @route   POST /api/admin/questions
 // @access  Private/Admin
-exports.addQuestion = async (req, res) => {
+const addQuestion = async (req, res) => {
   try {
     const { examId, text, options, correctAnswer, marks } = req.body;
 
@@ -56,7 +56,7 @@ exports.addQuestion = async (req, res) => {
 // @desc    Get all questions for a specific exam
 // @route   GET /api/admin/questions/:examId
 // @access  Private/Admin
-exports.getQuestionsByExam = async (req, res) => {
+const getQuestionsByExam = async (req, res) => {
   try {
     const { examId } = req.params;
 
@@ -90,7 +90,7 @@ exports.getQuestionsByExam = async (req, res) => {
 // @desc    Get all questions (optional table view)
 // @route   GET /api/admin/questions
 // @access  Private/Admin
-exports.getAllQuestions = async (req, res) => {
+const getAllQuestions = async (req, res) => {
   try {
     const questions = await Question.find()
       .populate('examId', 'title')
@@ -113,7 +113,7 @@ exports.getAllQuestions = async (req, res) => {
 // @desc    Get question by ID
 // @route   GET /api/admin/questions/single/:id
 // @access  Private/Admin
-exports.getQuestionById = async (req, res) => {
+const getQuestionById = async (req, res) => {
   try {
     const question = await Question.findById(req.params.id).populate('examId', 'title');
 
@@ -140,7 +140,7 @@ exports.getQuestionById = async (req, res) => {
 // @desc    Update question
 // @route   PUT /api/admin/questions/:id
 // @access  Private/Admin
-exports.updateQuestion = async (req, res) => {
+const updateQuestion = async (req, res) => {
   try {
     const { text, options, correctAnswer, marks } = req.body;
 
@@ -183,7 +183,7 @@ exports.updateQuestion = async (req, res) => {
 // @desc    Delete question
 // @route   DELETE /api/admin/questions/:id
 // @access  Private/Admin
-exports.deleteQuestion = async (req, res) => {
+const deleteQuestion = async (req, res) => {
   try {
     const question = await Question.findByIdAndDelete(req.params.id);
 
@@ -211,4 +211,13 @@ exports.deleteQuestion = async (req, res) => {
       error: error.message
     });
   }
+};
+
+export {
+  addQuestion,
+  getQuestionsByExam,
+  getAllQuestions,
+  getQuestionById,
+  updateQuestion,
+  deleteQuestion
 };

@@ -1,11 +1,13 @@
 const Exam = require('../models/Exam');
 const Job = require('../models/Job');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
+const Application = require('../models/Application');
 
 // @desc    Create a new exam schedule
 // @route   POST /api/exams
 // @access  Private (Company only)
-exports.createExam = async (req, res) => {
+const createExam = async (req, res) => {
   try {
     console.log('=== CREATE EXAM REQUEST ===');
     console.log('Request body:', req.body);
@@ -102,6 +104,47 @@ exports.createExam = async (req, res) => {
 
     console.log('Exam created successfully:', exam._id);
 
+    // ── Send notifications to all applicants of this job ──────────────────
+    try {
+      // Get all approved applicants for this job
+      const applications = await Application.find({ jobId })
+        .select('studentId')
+        .lean();
+
+      // Merge with explicitly listed studentIds (if any)
+      const allStudentIds = [
+        ...new Set([
+          ...applications.map(a => a.studentId.toString()),
+          ...validStudentIds.map(id => id.toString()),
+        ]),
+      ];
+
+      const examDateFormatted = new Date(examDate).toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      });
+      const locationText = location.type === 'Physical'
+        ? `Physical — ${location.address}`
+        : 'Online';
+
+      await Promise.allSettled(
+        allStudentIds.map(studentId =>
+          Notification.create({
+            userId: studentId,
+            title: `📅 Exam Scheduled: ${job.title}`,
+            message: `A ${examType} exam has been scheduled for the "${job.title}" position on ${examDateFormatted} at ${examTime}. Location: ${locationText}.${instructions ? ' Instructions: ' + instructions : ''}`,
+            type: 'exam',
+            relatedId: exam._id,
+            isRead: false,
+          })
+        )
+      );
+      console.log(`Exam notifications sent to ${allStudentIds.length} student(s)`);
+    } catch (notifErr) {
+      // Non-critical — log but don't fail the request
+      console.error('Failed to send exam notifications:', notifErr.message);
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     // Populate job details
     const populatedExam = await Exam.findById(exam._id)
       .populate('jobId', 'title type')
@@ -138,7 +181,7 @@ exports.createExam = async (req, res) => {
 // @desc    Get all exams for a company
 // @route   GET /api/exams/company/:companyId
 // @access  Private (Company only)
-exports.getCompanyExams = async (req, res) => {
+const getCompanyExams = async (req, res) => {
   try {
     const { companyId } = req.params;
 
@@ -173,7 +216,7 @@ exports.getCompanyExams = async (req, res) => {
 // @desc    Get exams for a student
 // @route   GET /api/exams/student/:studentId
 // @access  Private
-exports.getStudentExams = async (req, res) => {
+const getStudentExams = async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -208,7 +251,7 @@ exports.getStudentExams = async (req, res) => {
 // @desc    Update an exam
 // @route   PUT /api/exams/:id
 // @access  Private (Company only)
-exports.updateExam = async (req, res) => {
+const updateExam = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -248,6 +291,46 @@ exports.updateExam = async (req, res) => {
 
     await exam.save();
 
+    // ── Notify students of exam update ────────────────────────────────────
+    try {
+      const updatedStudentIds = exam.studentIds.map(id => id.toString());
+      // Also notify any job applicants who weren't explicitly listed
+      const applications = await Application.find({ jobId: exam.jobId })
+        .select('studentId').lean();
+      const allStudentIds = [
+        ...new Set([
+          ...applications.map(a => a.studentId.toString()),
+          ...updatedStudentIds,
+        ]),
+      ];
+
+      const jobDoc = await Job.findById(exam.jobId).select('title').lean();
+      const jobTitle = jobDoc ? jobDoc.title : 'the position';
+      const examDateFormatted = new Date(exam.examDate).toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      });
+      const locationText = exam.location.type === 'Physical'
+        ? `Physical — ${exam.location.address}`
+        : 'Online';
+
+      await Promise.allSettled(
+        allStudentIds.map(studentId =>
+          Notification.create({
+            userId: studentId,
+            title: `🔄 Exam Updated: ${jobTitle}`,
+            message: `The ${exam.examType} exam for "${jobTitle}" has been updated. New schedule: ${examDateFormatted} at ${exam.examTime}. Location: ${locationText}.`,
+            type: 'exam',
+            relatedId: exam._id,
+            isRead: false,
+          })
+        )
+      );
+      console.log(`Exam update notifications sent to ${allStudentIds.length} student(s)`);
+    } catch (notifErr) {
+      console.error('Failed to send exam update notifications:', notifErr.message);
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     const updatedExam = await Exam.findById(exam._id)
       .populate('jobId', 'title type department')
       .populate('studentIds', 'firstName lastName email');
@@ -269,7 +352,7 @@ exports.updateExam = async (req, res) => {
 // @desc    Delete an exam
 // @route   DELETE /api/exams/:id
 // @access  Private (Company only)
-exports.deleteExam = async (req, res) => {
+const deleteExam = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -309,7 +392,7 @@ exports.deleteExam = async (req, res) => {
 // @desc    Get single exam by ID
 // @route   GET /api/exams/:id
 // @access  Private
-exports.getExamById = async (req, res) => {
+const getExamById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -330,8 +413,12 @@ exports.getExamById = async (req, res) => {
     const isStudent = exam.studentIds.some(student => 
       student._id.toString() === req.user.id
     );
+    const isApplicant = await Application.exists({
+      jobId: exam.jobId._id || exam.jobId,
+      studentId: req.user.id
+    });
 
-    if (!isCompanyOwner && !isStudent && req.user.role !== 'admin') {
+    if (!isCompanyOwner && !isStudent && !isApplicant && req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false, 
         message: 'Not authorized to view this exam' 
@@ -350,4 +437,13 @@ exports.getExamById = async (req, res) => {
       error: error.message 
     });
   }
+};
+
+export {
+  createExam,
+  getCompanyExams,
+  getStudentExams,
+  updateExam,
+  deleteExam,
+  getExamById
 };

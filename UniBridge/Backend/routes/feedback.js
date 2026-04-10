@@ -1,5 +1,5 @@
-const express = require('express');
-const {
+import express from 'express';
+import {
   createFeedback,
   getAllFeedback,
   getFeedbackById,
@@ -10,8 +10,8 @@ const {
   deleteFeedback,
   getPublicFeedback,
   getFeedbackStats,
-} = require('../controllers/feedbackController');
-const { protect, authorize } = require('../middleware/auth');
+} from '../controllers/feedbackController.js';
+import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -31,4 +31,4 @@ router.put('/:id/status', protect, authorize('admin'), updateFeedbackStatus);
 router.put('/:id/response', protect, authorize('admin'), addAdminResponse);
 router.delete('/:id', protect, authorize('admin'), deleteFeedback);
 
-module.exports = router;
+export default router;

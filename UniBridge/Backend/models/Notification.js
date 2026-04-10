@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const notificationSchema = new mongoose.Schema(
   {
@@ -19,7 +19,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['application', 'status_update', 'general'],
+      enum: ['application', 'status_update', 'exam', 'general'],
       default: 'general',
     },
     relatedId: {
@@ -36,4 +36,4 @@ const notificationSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model('Notification', notificationSchema);
+export default mongoose.model('Notification', notificationSchema);

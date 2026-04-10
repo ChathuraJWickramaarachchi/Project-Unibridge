@@ -1,6 +1,4 @@
-const mongoose = require('mongoose');
-const dns = require('dns');
-const { URL } = require('url');
+import mongoose from 'mongoose';
 
 let retryTimer = null;
 const RETRY_INTERVAL_MS = 30000; // Retry every 30 seconds
@@ -93,50 +91,12 @@ const attemptConnect = async () => {
       console.error('   - Verify MongoDB Atlas cluster is running');
       console.error('   - Check firewall settings');
     }
-
-    return false;
+    
+    console.error('\n⚠️  Proceeding without database connection.');
+    console.error('   API endpoints requiring database will fail.');
+    // Don't throw error - allow server to continue for testing
+    // throw error;
   }
 };
 
-const scheduleRetry = () => {
-  if (retryTimer) return; // Already scheduled
-  console.log(`\n🔄 Will retry MongoDB connection in ${RETRY_INTERVAL_MS / 1000}s...`);
-  retryTimer = setTimeout(async () => {
-    retryTimer = null;
-    const connected = await attemptConnect();
-    if (!connected) scheduleRetry();
-  }, RETRY_INTERVAL_MS);
-};
-
-const connectDB = async () => {
-  if (!process.env.MONGODB_URI) {
-    console.error('❌ MONGODB_URI is not defined in your .env file.');
-    console.error('   Server will start but all database operations will fail.');
-    return;
-  }
-
-  const connected = await attemptConnect();
-
-  if (!connected) {
-    console.error('\n⚠️  Server is starting WITHOUT a database connection.');
-    console.error('   API endpoints requiring the database will return errors.');
-    console.error('   Fix the connection issue above and the server will auto-retry.');
-    scheduleRetry();
-  }
-
-  // Re-schedule retries on disconnect
-  mongoose.connection.on('disconnected', () => {
-    console.warn('⚠️  MongoDB disconnected. Scheduling reconnect...');
-    scheduleRetry();
-  });
-
-  mongoose.connection.on('reconnected', () => {
-    console.log('✅ MongoDB reconnected successfully.');
-    if (retryTimer) {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-    }
-  });
-};
-
-module.exports = connectDB;
+export default connectDB;

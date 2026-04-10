@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Exam {
   _id: string;
@@ -21,6 +22,7 @@ interface Exam {
 
 const ExamList = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,7 +53,14 @@ const ExamList = () => {
   };
 
   const handleStartExam = (examId: string) => {
-    navigate(`/exam/${examId}`);
+    if (!isAuthenticated) {
+      toast.error("Please log in to take the exam");
+      navigate("/auth");
+      return;
+    }
+    
+    // Navigate to SEB download page instead of directly to exam
+    navigate(`/download-seb/${examId}`);
   };
 
   const getStatusColor = (status: string) => {

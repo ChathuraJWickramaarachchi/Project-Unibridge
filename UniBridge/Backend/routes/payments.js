@@ -1,12 +1,12 @@
-const express = require('express');
-const {
+import express from 'express';
+import {
   processPayment,
   getPaymentById,
   getUserPayments,
   downloadCV,
   getPaymentStats
-} = require('../controllers/paymentController');
-const { protect } = require('../middleware/auth');
+} from '../controllers/paymentController.js';
+import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -38,4 +38,4 @@ router.get('/download/:id', downloadCV);
 // @access  Private/Admin
 router.get('/stats/all', getPaymentStats);
 
-module.exports = router;
+export default router;

@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
+// Use Vite proxy path so we don't hardcode the backend port.
+// vite.config.ts proxies /api → http://localhost:5001
+const API_URL = "/api";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
@@ -9,15 +11,18 @@ const getAuthHeaders = () => {
 
 export const applicationService = {
   // Submit a new application (with optional CV file)
+  // NOTE: Do NOT set Content-Type manually — axios sets multipart/form-data
+  // with the correct boundary automatically when FormData is passed.
   submit: async (formData) => {
     const res = await axios.post(`${API_URL}/applications`, formData, {
       headers: {
         ...getAuthHeaders(),
-        "Content-Type": "multipart/form-data",
+        // NO Content-Type override — let axios set multipart/form-data + boundary
       },
     });
     return res.data;
   },
+
 
   // Get my own applications (student)
   getMyApplications: async () => {
