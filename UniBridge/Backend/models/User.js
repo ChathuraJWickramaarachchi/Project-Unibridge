@@ -55,6 +55,19 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'student', 'employer'],
     default: 'student',
   },
+  isApproved: {
+    type: Boolean,
+    default: true, // Students are auto-approved, employers need approval
+  },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved', // Students are auto-approved
+  },
+  approvalRejectionReason: {
+    type: String,
+    trim: true,
+  },
   isVerified: {
     type: Boolean,
     default: false,
@@ -96,6 +109,20 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  twoFactorAuth: {
+    enabled: {
+      type: Boolean,
+      default: false,
+    },
+    secret: {
+      type: String,
+      select: false,
+    },
+    backupCodes: [{
+      type: String,
+      select: false,
+    }],
+  },
 }, {
   timestamps: true,
 });
@@ -134,6 +161,8 @@ userSchema.methods.getPublicProfile = function() {
     address: this.address,
     role: this.role,
     isVerified: this.isVerified,
+    isApproved: this.isApproved,
+    approvalStatus: this.approvalStatus,
     profile: this.profile,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,

@@ -28,10 +28,12 @@ import PasswordResetDialog from "@/components/auth/PasswordResetDialog";
 import EmailVerificationBanner from "@/components/auth/EmailVerificationBanner";
 import OTPVerificationDialog from "@/components/auth/OTPVerificationDialog";
 import AuthService from "@/services/authService";
+import TwoFactorService from "@/services/twoFactorService";
 import {
   validateEmail,
   validatePassword,
   validateName,
+  validatePhone,
 } from "@/lib/validation";
 
 const Auth = () => {
@@ -40,9 +42,13 @@ const Auth = () => {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showOTPDialog, setShowOTPDialog] = useState(false);
   const [pendingUserEmail, setPendingUserEmail] = useState("");
+  const [isLoginVerification, setIsLoginVerification] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [twoFAToken, setTwoFAToken] = useState("");
+  const [pending2FAUserId, setPending2FAUserId] = useState("");
   const navigate = useNavigate();
   const { user, isAuthenticated, login, register, setUser } = useAuth();
   const [formData, setFormData] = useState({
@@ -70,6 +76,58 @@ const Auth = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handle2FAVerify = async () => {
+    if (!twoFAToken || twoFAToken.length !== 6) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid 6-digit code",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await TwoFactorService.verify2FALogin(twoFAToken, pending2FAUserId);
+      
+      if (response.success) {
+        localStorage.setItem('token', response.data.token);
+        if (response.data.refreshToken) {
+          localStorage.setItem('refreshToken', response.data.refreshToken);
+        }
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        // Update AuthContext with user data
+        setUser(response.data.user);
+        
+        toast({
+          title: "Success",
+          description: "Signed in successfully!"
+        });
+        
+        setShow2FADialog(false);
+        setTwoFAToken("");
+        setPending2FAUserId("");
+        
+        navigate("/");
+      } else {
+        toast({
+          title: "Error",
+          description: response.error || "Invalid 2FA code",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to verify 2FA",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,10 +187,11 @@ const Auth = () => {
       }
 
       // Validate phone number
-      if (!formData.phone.trim()) {
+      const phoneValidation = validatePhone(formData.phone.trim());
+      if (!phoneValidation.isValid) {
         toast({
           title: "Validation Error",
-          description: "Phone number is required",
+          description: phoneValidation.error,
           variant: "destructive"
         });
         return;
@@ -183,6 +242,7 @@ const Auth = () => {
     setLoading(true);
     
     try {
+      console.log('Attempting authentication...', { isSignUp, email: formData.email });
       let response;
       if (isSignUp) {
         response = await register(formData);
@@ -190,31 +250,81 @@ const Auth = () => {
         response = await login(formData.email, formData.password);
       }
       
+      console.log('Login/Signup Response:', response);
+      
       if (response.success) {
         if (isSignUp) {
-          // For signup, show OTP verification dialog
+          // Check if user registered as employer (pending approval)
+          if (response.data?.user?.role === 'employer' && response.data?.user?.approvalStatus === 'pending') {
+            toast({
+              title: "Success",
+              description: response.message || "Account created successfully! Your account is pending admin approval."
+            });
+            // Redirect to pending approval page
+            navigate("/pending-approval");
+          } else {
+            // For student signup, show OTP verification dialog
+            toast({
+              title: "Success",
+              description: response.message || "Account created successfully! Please check your email for the OTP."
+            });
+            setPendingUserEmail(formData.email);
+            setIsLoginVerification(false);
+            setShowOTPDialog(true);
+          }
+        } else if (response.requiresOTP) {
+          // For login with OTP, show OTP verification dialog
           toast({
-            title: "Success",
-            description: "Account created successfully! Please check your email for the OTP."
+            title: "Verification Required",
+            description: response.message || "An OTP has been sent to your email."
           });
           setPendingUserEmail(formData.email);
+          setIsLoginVerification(true);
           setShowOTPDialog(true);
+        } else if (response.requires2FA) {
+          // For admin login with 2FA
+          toast({
+            title: "2FA Verification Required",
+            description: "Please enter your 2FA code"
+          });
+          setPending2FAUserId(response.userId);
+          setTwoFAToken("");
+          setShow2FADialog(true);
         } else {
-          // For login, redirect to home page
+          // For login without OTP (admin or backward compatibility), redirect to home page
           toast({
             title: "Success",
             description: "Signed in successfully!"
           });
+          console.log('Navigating to home page...');
           navigate("/");
         }
       } else {
-        toast({
-          title: "Error",
-          description: response.error || "Authentication failed",
-          variant: "destructive"
-        });
+        console.error('Authentication failed:', response);
+        
+        // Handle employer approval status errors
+        if (response.approvalStatus === 'pending') {
+          toast({
+            title: "Account Pending Approval",
+            description: "Your employer account is pending admin approval. Please wait for approval before logging in.",
+            variant: "destructive"
+          });
+        } else if (response.approvalStatus === 'rejected') {
+          toast({
+            title: "Account Rejected",
+            description: response.error || "Your employer account has been rejected. Please contact admin for more information.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: response.error || "Authentication failed",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error: any) {
+      console.error('Authentication error:', error);
       toast({
         title: "Error",
         description: error.message || "Something went wrong",
@@ -415,6 +525,16 @@ const Auth = () => {
                         placeholder="your.email@example.com"
                         className="pl-12 py-3 auth-input"
                         required
+                        onBlur={(e) => {
+                          const validation = validateEmail(e.target.value.trim());
+                          if (!validation.isValid && e.target.value.trim()) {
+                            toast({
+                              title: "Validation Error",
+                              description: validation.error,
+                              variant: "destructive"
+                            });
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -490,6 +610,16 @@ const Auth = () => {
                         type="tel"
                         value={formData.phone}
                         onChange={handleChange}
+                        onBlur={(e) => {
+                          const validation = validatePhone(e.target.value.trim());
+                          if (!validation.isValid && e.target.value.trim()) {
+                            toast({
+                              title: "Validation Error",
+                              description: validation.error,
+                              variant: "destructive"
+                            });
+                          }
+                        }}
                         placeholder="+94 11 587 469"
                         className="pl-12 py-3 auth-input"
                         required
@@ -520,7 +650,7 @@ const Auth = () => {
                       <Building className="w-4 h-4 text-primary" />
                       I am a
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setFormData({...formData, role: "student"})}
@@ -547,20 +677,13 @@ const Auth = () => {
                         <div className="font-medium">Employer</div>
                         <div className="text-xs text-muted-foreground mt-1">Posting opportunities</div>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData({...formData, role: "admin"})}
-                        className={`p-4 rounded-xl border-2 transition-all ${
-                          formData.role === "admin"
-                            ? "border-purple-500 bg-purple-500/10 text-purple-600"
-                            : "border-border hover:border-purple-500/50 bg-background/50"
-                        }`}
-                      >
-                        <Shield className="w-6 h-6 mx-auto mb-2" />
-                        <div className="font-medium">Admin</div>
-                        <div className="text-xs text-muted-foreground mt-1">Platform management</div>
-                      </button>
                     </div>
+                    {formData.role === "employer" && (
+                      <p className="mt-2 text-xs text-amber-600 flex items-center gap-1">
+                        <Shield className="w-3 h-3" />
+                        Employer accounts require admin approval before login
+                      </p>
+                    )}
                   </div>
                   
                   {/* Terms and Conditions Checkbox */}
@@ -784,10 +907,71 @@ const Auth = () => {
           onOpenChange={setShowResetDialog} 
         />
         
-        <OTPVerificationDialog 
+        {/* 2FA Verification Dialog */}
+        {show2FADialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-card rounded-lg shadow-xl max-w-md w-full p-6"
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-8 h-8 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2">Two-Factor Authentication</h2>
+                <p className="text-muted-foreground text-sm">
+                  Enter the 6-digit code from your authenticator app
+                </p>
+              </div>
+        
+              <div className="space-y-4">
+                <div>
+                  <input
+                    type="text"
+                    value={twoFAToken}
+                    onChange={(e) => setTwoFAToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    maxLength={6}
+                    className="w-full text-center text-3xl tracking-widest font-mono px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    autoFocus
+                  />
+                </div>
+        
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handle2FAVerify}
+                  disabled={loading}
+                >
+                  {loading ? "Verifying..." : "Verify"}
+                </Button>
+        
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setShow2FADialog(false);
+                    setTwoFAToken("");
+                    setPending2FAUserId("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+        
+        <OTPVerificationDialog
           open={showOTPDialog} 
           onOpenChange={setShowOTPDialog} 
           email={pendingUserEmail}
+          isLoginVerification={isLoginVerification}
           onVerificationSuccess={(token) => {
             // Store the new token
             localStorage.setItem('token', token);
@@ -798,7 +982,9 @@ const Auth = () => {
             }
             toast({
               title: "Success",
-              description: "Account verified successfully! You can now access all features."
+              description: isLoginVerification 
+                ? "Login verified successfully!" 
+                : "Account verified successfully! You can now access all features."
             });
             navigate("/");
           }}

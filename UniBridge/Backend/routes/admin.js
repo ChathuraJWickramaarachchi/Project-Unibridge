@@ -6,6 +6,9 @@ const {
   deleteUser,
   getDashboardStats,
   verifyUser,
+  getPendingEmployers,
+  approveEmployer,
+  rejectEmployer,
 } = require('../controllers/adminController');
 const {
   createExam,
@@ -45,6 +48,11 @@ router.get('/users/:id', getUserById);
 router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
 router.put('/users/:id/verify', verifyUser);
+
+// Employer approval management
+router.get('/employers', getPendingEmployers);
+router.post('/employers/:userId/approve', approveEmployer);
+router.post('/employers/:userId/reject', rejectEmployer);
 
 // Exam Management
 router.post('/exams', createExam);

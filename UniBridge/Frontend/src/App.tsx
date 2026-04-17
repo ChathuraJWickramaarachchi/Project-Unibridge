@@ -20,6 +20,7 @@ import Payment from "./pages/Payment";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import PendingApproval from "./pages/PendingApproval";
 // Admin Pages
 import AdminDashboard from "./pages/Admin/Dashboard";
 import AdminUsers from "./pages/Admin/Users";
@@ -80,6 +81,7 @@ const App = () => {
               <Route path="/contact" element={<Layout><ContactUs /></Layout>} />
               <Route path="/feedback" element={<Layout><Feedback /></Layout>} />
               <Route path="/auth" element={<Layout showFooter={false}><Auth /></Layout>} />
+              <Route path="/pending-approval" element={<PendingApproval />} />
               <Route path="/profile" element={<Layout><Profile /></Layout>} />
               <Route path="/profile/:section" element={<Layout><Profile /></Layout>} />
               

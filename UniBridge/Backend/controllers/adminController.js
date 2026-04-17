@@ -214,6 +214,143 @@ const verifyUser = async (req, res, next) => {
   }
 };
 
+// @desc    Get all pending employer registrations
+// @route   GET /api/admin/employers/pending
+// @access  Private/Admin
+const getPendingEmployers = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Build filter object
+    let filter = {
+      role: 'employer',
+      approvalStatus: req.query.status || 'pending' // 'pending', 'approved', 'rejected'
+    };
+    
+    // Search by name or email
+    if (req.query.search) {
+      filter.$or = [
+        { firstName: { $regex: req.query.search, $options: 'i' } },
+        { lastName: { $regex: req.query.search, $options: 'i' } },
+        { email: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+    
+    const employers = await User.find(filter)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    const total = await User.countDocuments(filter);
+    
+    res.status(200).json({
+      success: true,
+      count: employers.length,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      data: employers,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Approve employer registration
+// @route   POST /api/admin/employers/:userId/approve
+// @access  Private/Admin
+const approveEmployer = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+    
+    if (user.role !== 'employer') {
+      return res.status(400).json({
+        success: false,
+        error: 'Can only approve employer accounts',
+      });
+    }
+    
+    user.isApproved = true;
+    user.approvalStatus = 'approved';
+    user.approvalRejectionReason = undefined;
+    await user.save();
+    
+    // Send notification to employer
+    await require('../models/Notification').create({
+      userId: user._id,
+      title: 'Account Approved!',
+      message: 'Congratulations! Your employer account has been approved. You can now login and post opportunities.',
+      type: 'general',
+      isRead: false,
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: user.getPublicProfile(),
+      message: 'Employer account approved successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reject employer registration
+// @route   POST /api/admin/employers/:userId/reject
+// @access  Private/Admin
+const rejectEmployer = async (req, res, next) => {
+  try {
+    const { reason } = req.body;
+    
+    const user = await User.findById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+    
+    if (user.role !== 'employer') {
+      return res.status(400).json({
+        success: false,
+        error: 'Can only reject employer accounts',
+      });
+    }
+    
+    user.isApproved = false;
+    user.approvalStatus = 'rejected';
+    user.approvalRejectionReason = reason || 'No reason provided';
+    await user.save();
+    
+    // Send notification to employer
+    await require('../models/Notification').create({
+      userId: user._id,
+      title: 'Account Rejected',
+      message: `Your employer account has been rejected. Reason: ${user.approvalRejectionReason}`,
+      type: 'general',
+      isRead: false,
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: user.getPublicProfile(),
+      message: 'Employer account rejected',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -221,4 +358,7 @@ module.exports = {
   deleteUser,
   getDashboardStats,
   verifyUser,
+  getPendingEmployers,
+  approveEmployer,
+  rejectEmployer,
 };

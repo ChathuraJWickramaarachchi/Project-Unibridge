@@ -4,7 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Building, Users, CheckCircle, XCircle, Eye, Mail } from "lucide-react";
+import { Search, Building, Users, CheckCircle, XCircle, Eye, Mail, Clock } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import AdminService from "@/services/adminService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -14,7 +24,11 @@ const AdminEmployers = () => {
   const [employers, setEmployers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [verificationFilter, setVerificationFilter] = useState("all");
+  const [approvalFilter, setApprovalFilter] = useState("all");
+  const [rejectDialog, setRejectDialog] = useState(false);
+  const [selectedEmployer, setSelectedEmployer] = useState<any>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
   const { role } = useAuth();
   const navigate = useNavigate();
 
@@ -30,7 +44,7 @@ const AdminEmployers = () => {
     }
 
     loadEmployers();
-  }, [role, navigate, searchTerm, verificationFilter]);
+  }, [role, navigate, searchTerm, approvalFilter]);
 
   const loadEmployers = async () => {
     try {
@@ -40,7 +54,7 @@ const AdminEmployers = () => {
       };
 
       if (searchTerm) params.search = searchTerm;
-      if (verificationFilter !== "all") params.isVerified = verificationFilter === "verified";
+      if (approvalFilter !== "all") params.approvalStatus = approvalFilter;
 
       const response = await AdminService.getAllUsers(params);
       if (response?.success) {
@@ -54,6 +68,85 @@ const AdminEmployers = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApproveEmployer = async (employerId: string) => {
+    setActionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/employers/${employerId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Employer account approved successfully",
+        });
+        loadEmployers();
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.error || "Failed to approve employer",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to connect to server",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectEmployer = async () => {
+    if (!selectedEmployer) return;
+    
+    setActionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/employers/${selectedEmployer._id}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Employer account rejected",
+        });
+        setRejectDialog(false);
+        setRejectionReason("");
+        setSelectedEmployer(null);
+        loadEmployers();
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.error || "Failed to reject employer",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to connect to server",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -76,6 +169,19 @@ const AdminEmployers = () => {
     }
   };
 
+  const getApprovalBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" /> Approved</Badge>;
+      case 'pending':
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Rejected</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
   if (loading && employers.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -88,7 +194,7 @@ const AdminEmployers = () => {
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Employer Management</h1>
-        <p className="text-muted-foreground">Manage employer accounts and company profiles</p>
+        <p className="text-muted-foreground">Manage employer accounts, approve or reject registrations</p>
       </div>
 
       {/* Stats Cards */}
@@ -106,12 +212,12 @@ const AdminEmployers = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Verified</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {employers.filter(e => e.isVerified).length}
+              {employers.filter(e => e.approvalStatus === 'approved').length}
             </div>
             <p className="text-xs text-muted-foreground">Approved accounts</p>
           </CardContent>
@@ -119,14 +225,14 @@ const AdminEmployers = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <XCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+            <Clock className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {employers.filter(e => !e.isVerified).length}
+              {employers.filter(e => e.approvalStatus === 'pending').length}
             </div>
-            <p className="text-xs text-muted-foreground">Awaiting verification</p>
+            <p className="text-xs text-muted-foreground">Awaiting approval</p>
           </CardContent>
         </Card>
       </div>
@@ -152,20 +258,21 @@ const AdminEmployers = () => {
             </div>
             
             <select 
-              value={verificationFilter} 
-              onChange={(e) => setVerificationFilter(e.target.value)}
+              value={approvalFilter} 
+              onChange={(e) => setApprovalFilter(e.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="all">All Status</option>
-              <option value="verified">Verified</option>
-              <option value="unverified">Unverified</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
             </select>
 
             <Button 
               variant="outline" 
               onClick={() => {
                 setSearchTerm("");
-                setVerificationFilter("all");
+                setApprovalFilter("all");
               }}
             >
               Clear Filters
@@ -196,9 +303,10 @@ const AdminEmployers = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Approval Status</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -209,7 +317,7 @@ const AdminEmployers = () => {
                       <TableCell>
                         <div>
                           <p className="font-medium">
-                            {employer.profile?.companyName || `${employer.firstName} ${employer.lastName}`}
+                            {employer.firstName} {employer.lastName}
                           </p>
                           <p className="text-sm text-muted-foreground">{employer.email}</p>
                         </div>
@@ -221,17 +329,10 @@ const AdminEmployers = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {employer.isVerified ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Verified
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Pending
-                          </Badge>
-                        )}
+                        <span className="text-sm">{employer.phone || 'N/A'}</span>
+                      </TableCell>
+                      <TableCell>
+                        {getApprovalBadge(employer.approvalStatus || 'pending')}
                       </TableCell>
                       <TableCell>
                         {new Date(employer.createdAt).toLocaleDateString()}
@@ -245,17 +346,33 @@ const AdminEmployers = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleVerifyEmployer(employer._id, employer.isVerified, employer.firstName)}
-                          >
-                            {employer.isVerified ? (
-                              <XCircle className="h-4 w-4 text-yellow-600" />
-                            ) : (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            )}
-                          </Button>
+                          {employer.approvalStatus === 'pending' && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleApproveEmployer(employer._id)}
+                                disabled={actionLoading}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedEmployer(employer);
+                                  setRejectDialog(true);
+                                }}
+                                disabled={actionLoading}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Reject
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -266,6 +383,52 @@ const AdminEmployers = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Reject Dialog */}
+      <Dialog open={rejectDialog} onOpenChange={setRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Employer Registration</DialogTitle>
+            <DialogDescription>
+              {selectedEmployer && (
+                <>You are rejecting <strong>{selectedEmployer.firstName} {selectedEmployer.lastName}</strong>. Please provide a reason.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reason">Rejection Reason</Label>
+              <Textarea
+                id="reason"
+                placeholder="Enter reason for rejection..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectDialog(false);
+                setRejectionReason("");
+                setSelectedEmployer(null);
+              }}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectEmployer}
+              disabled={actionLoading || !rejectionReason.trim()}
+            >
+              {actionLoading ? "Processing..." : "Reject Employer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
