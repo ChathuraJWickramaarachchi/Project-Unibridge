@@ -68,6 +68,7 @@ import applicationRoutes from './routes/applications.js';
 import notificationRoutes from './routes/notifications.js';
 import examRoutes from './routes/exams.js';
 import paymentRoutes from './routes/payments.js';
+import resultsRoutes from './routes/results.js';
 
 console.log('Auth routes:', authRoutes);
 app.use('/api/auth', authRoutes);
@@ -80,6 +81,7 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/results', resultsRoutes);
 
 // Serve uploaded resumes statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
