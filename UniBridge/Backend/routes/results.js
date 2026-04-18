@@ -232,11 +232,11 @@ const getResultsStatistics = async (req, res) => {
   }
 };
 
-// Routes
-router.get('/stats/summary', getResultsStatistics);
+// Routes - Order matters! More specific routes must come before generic ones
+router.get('/stats/summary', getResultsStatistics);  // Most specific
 router.get('/exam/:examId', getResultsByExam);
 router.get('/student/:studentId', getResultsByStudent);
-router.get('/:id', getResultById);
-router.get('/', getAllResults);
+router.get('/', getAllResults);                       // Generic route before :id
+router.get('/:id', getResultById);                   // Least specific - catches individual IDs
 
 export default router;

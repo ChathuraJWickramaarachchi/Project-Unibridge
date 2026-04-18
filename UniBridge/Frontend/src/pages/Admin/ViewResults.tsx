@@ -48,31 +48,43 @@ const ViewResults = () => {
   const [exams, setExams] = useState<any[]>([]);
   const [results, setResults] = useState<Result[]>([]);
   const [stats, setStats] = useState<Statistics | null>(null);
-  const [selectedExam, setSelectedExam] = useState("");
+  const [selectedExam, setSelectedExam] = useState("all");
   const [loading, setLoading] = useState(true);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('ViewResults component mounted');
     initializeData();
   }, []);
+  
+  useEffect(() => {
+    console.log('Loading state changed:', loading);
+  }, [loading]);
 
   const initializeData = async () => {
+    console.log('initializeData started');
     try {
+      console.log('Loading exams...');
       await loadExams();
+      console.log('Exams loaded successfully');
     } catch (e) {
       console.error('Failed to load exams:', e);
     }
     
     try {
+      console.log('Loading stats...');
       await loadStats();
+      console.log('Stats loaded successfully');
     } catch (e) {
       console.error('Failed to load stats:', e);
     }
     
     try {
+      console.log('Loading results...');
       await loadAllResults();
+      console.log('Results loaded successfully');
     } catch (e) {
       console.error('Failed to load results:', e);
     }
@@ -82,8 +94,11 @@ const ViewResults = () => {
     try {
       setLoading(true);
       const response = await examService.getAllAdminExams();
+      console.log('getAllAdminExams response:', response);
       if (response.success) {
         setExams(response.data);
+      } else {
+        console.warn('getAllAdminExams returned success:false');
       }
     } catch (error: any) {
       console.error('Error loading exams:', error);
@@ -101,8 +116,11 @@ const ViewResults = () => {
     try {
       setStatsLoading(true);
       const response = await examService.getNewResultsStatistics();
+      console.log('getNewResultsStatistics response:', response);
       if (response.success) {
         setStats(response.data);
+      } else {
+        console.warn('getNewResultsStatistics returned success:false');
       }
     } catch (error: any) {
       console.error('Error loading stats:', error);
@@ -116,9 +134,12 @@ const ViewResults = () => {
       setResultsLoading(true);
       setError(null);
       const response = await examService.getAllNewResults();
+      console.log('getAllNewResults response:', response);
       
       if (response.success) {
         setResults(response.data);
+      } else {
+        console.warn('getAllNewResults returned success:false');
       }
     } catch (error: any) {
       console.error('Error loading results:', error);
@@ -134,9 +155,11 @@ const ViewResults = () => {
   };
 
   const handleExamChange = async (examId: string) => {
+    console.log('handleExamChange called with:', examId);
     setSelectedExam(examId);
 
-    if (!examId) {
+    if (!examId || examId === "all") {
+      console.log('Loading all results');
       await loadAllResults();
       return;
     }
@@ -145,6 +168,7 @@ const ViewResults = () => {
       setResultsLoading(true);
       setError(null);
       const response = await examService.getNewResultsByExam(examId);
+      console.log('getNewResultsByExam response:', response);
 
       if (response.success) {
         setResults(response.data);
@@ -285,7 +309,7 @@ const ViewResults = () => {
               <SelectValue placeholder="All exams" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Exams</SelectItem>
+              <SelectItem value="all">All Exams</SelectItem>
               {exams.map((exam) => (
                 <SelectItem key={exam._id} value={exam._id}>
                   {exam.title}
@@ -302,7 +326,7 @@ const ViewResults = () => {
           <CardTitle>Student Results</CardTitle>
           <CardDescription>
             {results.length} result(s) found
-            {selectedExam && " for selected exam"}
+            {selectedExam && selectedExam !== "all" && " for selected exam"}
           </CardDescription>
         </CardHeader>
         <CardContent>
