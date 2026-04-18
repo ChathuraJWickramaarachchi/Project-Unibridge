@@ -96,6 +96,20 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  twoFactorAuth: {
+    enabled: {
+      type: Boolean,
+      default: false,
+    },
+    secret: {
+      type: String,
+      select: false, // Don't include in queries by default
+    },
+    backupCodes: [{
+      type: String,
+      select: false, // Don't include in queries by default
+    }],
+  },
 }, {
   timestamps: true,
 });

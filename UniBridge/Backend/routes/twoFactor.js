@@ -1,14 +1,15 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   setup2FA,
   verify2FA,
   disable2FA,
   verify2FALogin,
   get2FAStatus,
   regenerateBackupCodes,
-} = require('../controllers/twoFactorController');
-const { protect } = require('../middleware/auth');
+} from '../controllers/twoFactorController.js';
+import { protect } from '../middleware/auth.js';
+
+const router = express.Router();
 
 // Public route - no authentication required (user is still logging in)
 router.post('/login-verify', verify2FALogin);
@@ -31,4 +32,4 @@ router.get('/status', get2FAStatus);
 // Regenerate backup codes
 router.post('/backup-codes', regenerateBackupCodes);
 
-module.exports = router;
+export default router;

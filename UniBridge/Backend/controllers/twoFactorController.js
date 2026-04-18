@@ -1,7 +1,8 @@
-const speakeasy = require('speakeasy');
-const QRCode = require('qrcode');
-const User = require('../models/User');
-const crypto = require('crypto');
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
+import User from '../models/User.js';
+import crypto from 'crypto';
+import { generateToken, generateRefreshToken } from '../config/jwt.js';
 
 // @desc    Generate 2FA setup (secret and QR code)
 // @route   POST /api/2fa/setup
@@ -240,7 +241,6 @@ const verify2FALogin = async (req, res, next) => {
     }
 
     // Generate JWT tokens
-    const { generateToken, generateRefreshToken } = require('../config/jwt');
     const token_data = generateToken(user._id);
     const refreshToken = generateRefreshToken(user);
 
@@ -378,7 +378,7 @@ async function checkBackupCode(user, token) {
   return false;
 }
 
-module.exports = {
+export {
   setup2FA,
   verify2FA,
   disable2FA,

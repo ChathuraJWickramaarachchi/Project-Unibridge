@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,21 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import twoFactorService from "@/services/twoFactorService";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const AdminSettings = () => {
   const { role, user } = useAuth();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
+  const [loading2FA, setLoading2FA] = useState(false);
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [secretKey, setSecretKey] = useState("");
+  const [verificationToken, setVerificationToken] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [showBackupCodes, setShowBackupCodes] = useState(false);
   
   // Settings state
   const [settings, setSettings] = useState({
@@ -44,6 +54,29 @@ const AdminSettings = () => {
       dateFormat: "MM/DD/YYYY"
     }
   });
+
+  // Load 2FA status on mount
+  useEffect(() => {
+    load2FAStatus();
+  }, []);
+
+  const load2FAStatus = async () => {
+    try {
+      const response = await twoFactorService.get2FAStatus();
+      if (response.success) {
+        setIs2FAEnabled(response.data.enabled);
+        setSettings({
+          ...settings,
+          security: {
+            ...settings.security,
+            twoFactorAuth: response.data.enabled
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load 2FA status:", error);
+    }
+  };
 
   if (role !== "admin") {
     toast({
@@ -84,6 +117,148 @@ const AdminSettings = () => {
         description: "Settings reset to default values",
       });
     }
+  };
+
+  const handle2FAToggle = async (checked: boolean) => {
+    if (checked) {
+      // Enable 2FA
+      await setup2FA();
+    } else {
+      // Disable 2FA
+      if (window.confirm("Are you sure you want to disable Two-Factor Authentication?")) {
+        await disable2FA();
+      }
+    }
+  };
+
+  const setup2FA = async () => {
+    try {
+      setLoading2FA(true);
+      const response = await twoFactorService.setup2FA();
+      
+      if (response.success) {
+        setQrCodeUrl(response.data.qrCodeUrl);
+        setSecretKey(response.data.secret);
+        setVerificationToken("");
+        setShow2FADialog(true);
+      } else {
+        toast({
+          title: "Error",
+          description: response.error || "Failed to setup 2FA",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to setup 2FA",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading2FA(false);
+    }
+  };
+
+  const verifyAndEnable2FA = async () => {
+    if (!verificationToken || verificationToken.length !== 6) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid 6-digit code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading2FA(true);
+      const response = await twoFactorService.verify2FA(verificationToken);
+      
+      if (response.success) {
+        setIs2FAEnabled(true);
+        setSettings({
+          ...settings,
+          security: {
+            ...settings.security,
+            twoFactorAuth: true
+          }
+        });
+        setBackupCodes(response.data.backupCodes || []);
+        setShowBackupCodes(true);
+        setShow2FADialog(false);
+        
+        toast({
+          title: "Success",
+          description: "2FA enabled successfully! Save your backup codes.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: response.error || "Invalid verification code",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to verify 2FA",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading2FA(false);
+    }
+  };
+
+  const disable2FA = async () => {
+    try {
+      setLoading2FA(true);
+      // For disabling, we need to prompt for a verification code
+      const token = prompt("Enter your 2FA code or a backup code to disable:");
+      
+      if (!token) {
+        setLoading2FA(false);
+        return;
+      }
+
+      const response = await twoFactorService.disable2FA(token);
+      
+      if (response.success) {
+        setIs2FAEnabled(false);
+        setSettings({
+          ...settings,
+          security: {
+            ...settings.security,
+            twoFactorAuth: false
+          }
+        });
+        
+        toast({
+          title: "Success",
+          description: "2FA disabled successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: response.error || "Failed to disable 2FA",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to disable 2FA",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading2FA(false);
+    }
+  };
+
+  const copyBackupCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast({
+      title: "Copied",
+      description: "Backup code copied to clipboard",
+    });
   };
 
   return (
@@ -229,13 +404,9 @@ const AdminSettings = () => {
                   <p className="text-sm text-muted-foreground">Require 2FA for admin accounts</p>
                 </div>
                 <Switch
-                  checked={settings.security.twoFactorAuth}
-                  onCheckedChange={(checked) => 
-                    setSettings({
-                      ...settings, 
-                      security: {...settings.security, twoFactorAuth: checked}
-                    })
-                  }
+                  checked={is2FAEnabled}
+                  onCheckedChange={handle2FAToggle}
+                  disabled={loading2FA}
                 />
               </div>
               
@@ -430,6 +601,120 @@ const AdminSettings = () => {
           </Card>
         </div>
       </div>
+
+      {/* 2FA Setup Dialog */}
+      <Dialog open={show2FADialog} onOpenChange={setShow2FADialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Setup Two-Factor Authentication</DialogTitle>
+            <DialogDescription>
+              Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            {/* QR Code */}
+            <div className="flex justify-center p-4 bg-white rounded-lg">
+              {qrCodeUrl && (
+                <img src={qrCodeUrl} alt="2FA QR Code" className="w-48 h-48" />
+              )}
+            </div>
+
+            {/* Secret Key */}
+            <div className="space-y-2">
+              <Label>Secret Key (for manual entry)</Label>
+              <div className="flex gap-2">
+                <Input 
+                  value={secretKey} 
+                  readOnly 
+                  className="font-mono text-sm"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(secretKey);
+                    toast({ title: "Copied", description: "Secret key copied" });
+                  }}
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
+
+            {/* Verification Code Input */}
+            <div className="space-y-2">
+              <Label htmlFor="verificationCode">Verification Code</Label>
+              <Input
+                id="verificationCode"
+                placeholder="Enter 6-digit code"
+                value={verificationToken}
+                onChange={(e) => setVerificationToken(e.target.value)}
+                maxLength={6}
+                className="text-center text-2xl tracking-widest"
+              />
+            </div>
+
+            {/* Verify Button */}
+            <Button 
+              className="w-full" 
+              onClick={verifyAndEnable2FA}
+              disabled={loading2FA || verificationToken.length !== 6}
+            >
+              {loading2FA ? "Verifying..." : "Verify & Enable 2FA"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Backup Codes Dialog */}
+      <Dialog open={showBackupCodes} onOpenChange={setShowBackupCodes}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save Your Backup Codes</DialogTitle>
+            <DialogDescription>
+              Store these backup codes in a safe place. You can use them to access your account if you lose your authenticator device.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-2">
+              {backupCodes.map((code, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center justify-between p-2 bg-muted rounded cursor-pointer hover:bg-muted/80"
+                  onClick={() => copyBackupCode(code)}
+                >
+                  <code className="text-sm font-mono">{code}</code>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  navigator.clipboard.writeText(backupCodes.join('\n'));
+                  toast({ title: "Copied", description: "All backup codes copied" });
+                }}
+              >
+                Copy All Codes
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowBackupCodes(false)}
+              >
+                I've Saved My Backup Codes
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Click on any code to copy it individually
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

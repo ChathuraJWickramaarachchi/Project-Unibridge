@@ -51,7 +51,8 @@ class AuthService {
 
       const data = await response.json();
       
-      if (data.success) {
+      if (data.success && !data.requires2FA) {
+        // Only store token and user if 2FA is NOT required
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.data.user));
       }
