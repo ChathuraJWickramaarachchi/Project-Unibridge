@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import { createNotification } from '../utils/notificationHelper.js';
 import { generateToken } from '../config/jwt.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
@@ -98,6 +99,14 @@ const login = async (req, res, next) => {
 
     // Check if 2FA is enabled
     if (user.twoFactorAuth.enabled) {
+      // Create login notification
+      await createNotification(
+        user._id,
+        'Login Attempt',
+        `A login attempt was made to your account at ${new Date().toLocaleString()}. Complete 2FA verification to access your account.`,
+        'general'
+      );
+
       // Return userId so frontend can verify 2FA
       return res.status(200).json({
         success: true,
@@ -115,6 +124,14 @@ const login = async (req, res, next) => {
         },
       });
     }
+
+    // Create login notification
+    await createNotification(
+      user._id,
+      'Login Successful',
+      `Welcome back, ${user.firstName}! You successfully logged in at ${new Date().toLocaleString()}.`,
+      'general'
+    );
 
     // Generate token
     const token = generateToken(user._id);

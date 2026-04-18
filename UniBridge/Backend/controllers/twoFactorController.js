@@ -1,6 +1,7 @@
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import User from '../models/User.js';
+import { createNotification } from '../utils/notificationHelper.js';
 import crypto from 'crypto';
 import { generateToken, generateRefreshToken } from '../config/jwt.js';
 
@@ -243,6 +244,14 @@ const verify2FALogin = async (req, res, next) => {
     // Generate JWT tokens
     const token_data = generateToken(user._id);
     const refreshToken = generateRefreshToken(user);
+
+    // Create login success notification
+    await createNotification(
+      user._id,
+      'Login Successful',
+      `Welcome back, ${user.firstName}! You successfully logged in with 2FA at ${new Date().toLocaleString()}.`,
+      'general'
+    );
 
     res.status(200).json({
       success: true,
