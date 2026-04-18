@@ -59,7 +59,23 @@ const ViewResults = () => {
   }, []);
 
   const initializeData = async () => {
-    await Promise.all([loadExams(), loadStats(), loadAllResults()]);
+    try {
+      await loadExams();
+    } catch (e) {
+      console.error('Failed to load exams:', e);
+    }
+    
+    try {
+      await loadStats();
+    } catch (e) {
+      console.error('Failed to load stats:', e);
+    }
+    
+    try {
+      await loadAllResults();
+    } catch (e) {
+      console.error('Failed to load results:', e);
+    }
   };
 
   const loadExams = async () => {
@@ -84,17 +100,9 @@ const ViewResults = () => {
   const loadStats = async () => {
     try {
       setStatsLoading(true);
-      const response = await fetch('/api/results/stats/summary', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) throw new Error('Failed to load statistics');
-      const data = await response.json();
-      
-      if (data.success) {
-        setStats(data.data);
+      const response = await examService.getNewResultsStatistics();
+      if (response.success) {
+        setStats(response.data);
       }
     } catch (error: any) {
       console.error('Error loading stats:', error);
@@ -107,18 +115,10 @@ const ViewResults = () => {
     try {
       setResultsLoading(true);
       setError(null);
+      const response = await examService.getAllNewResults();
       
-      const response = await fetch('/api/results', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) throw new Error('Failed to load results');
-      const data = await response.json();
-
-      if (data.success) {
-        setResults(data.data);
+      if (response.success) {
+        setResults(response.data);
       }
     } catch (error: any) {
       console.error('Error loading results:', error);
@@ -144,18 +144,10 @@ const ViewResults = () => {
     try {
       setResultsLoading(true);
       setError(null);
-      
-      const response = await fetch(`/api/results/exam/${examId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await examService.getNewResultsByExam(examId);
 
-      if (!response.ok) throw new Error('Failed to load results');
-      const data = await response.json();
-
-      if (data.success) {
-        setResults(data.data);
+      if (response.success) {
+        setResults(response.data);
       }
     } catch (error: any) {
       console.error('Error loading exam results:', error);

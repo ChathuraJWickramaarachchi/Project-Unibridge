@@ -18,6 +18,8 @@ const getAllResults = async (req, res) => {
   try {
     const { examId, studentId } = req.query;
     
+    console.log('GET /api/results - Query params:', { examId, studentId });
+    
     // Build filter object
     const filter = {};
     if (examId) filter.examId = examId;
@@ -28,6 +30,8 @@ const getAllResults = async (req, res) => {
       .populate('examId', 'title')
       .sort({ submittedAt: -1 })
       .lean();
+
+    console.log(`Found ${results.length} results`);
 
     // Format response
     const formattedResults = results.map(result => ({
@@ -189,7 +193,11 @@ const getResultById = async (req, res) => {
  */
 const getResultsStatistics = async (req, res) => {
   try {
+    console.log('GET /api/results/stats/summary');
+    
     const results = await Result.find().lean();
+    
+    console.log(`Found ${results.length} results for statistics`);
     
     const totalAttempts = results.length;
     const passedAttempts = results.filter(r => r.status === 'PASS').length;
