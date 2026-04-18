@@ -55,6 +55,33 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'student', 'employer'],
     default: 'student',
   },
+  isApproved: {
+    type: Boolean,
+    default: false, // Employers need admin approval
+  },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending', // For employer registration tracking
+  },
+  companyInfo: {
+    companyName: {
+      type: String,
+      trim: true,
+    },
+    companyWebsite: {
+      type: String,
+      trim: true,
+    },
+    companySize: {
+      type: String,
+      enum: ['1-10', '11-50', '51-200', '201-500', '500+'],
+    },
+    industry: {
+      type: String,
+      trim: true,
+    },
+  },
   isVerified: {
     type: Boolean,
     default: false,
@@ -148,6 +175,9 @@ userSchema.methods.getPublicProfile = function() {
     address: this.address,
     role: this.role,
     isVerified: this.isVerified,
+    isApproved: this.isApproved,
+    approvalStatus: this.approvalStatus,
+    companyInfo: this.companyInfo,
     profile: this.profile,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,

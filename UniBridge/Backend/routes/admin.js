@@ -8,6 +8,11 @@ import {
   verifyUser,
 } from '../controllers/adminController.js';
 import {
+  getPendingEmployers,
+  approveEmployer,
+  rejectEmployer,
+} from '../controllers/adminEmployerController.js';
+import {
   createExam,
   getAllExams,
   getExamById,
@@ -45,6 +50,11 @@ router.get('/users/:id', getUserById);
 router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
 router.put('/users/:id/verify', verifyUser);
+
+// Employer approval management
+router.get('/employers/pending', getPendingEmployers);
+router.put('/employers/:id/approve', approveEmployer);
+router.put('/employers/:id/reject', rejectEmployer);
 
 // Exam Management
 router.post('/exams', createExam);

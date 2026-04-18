@@ -225,11 +225,20 @@ const Auth = () => {
           }
         }
       } else {
-        toast({
-          title: "Error",
-          description: response.error || "Authentication failed",
-          variant: "destructive"
-        });
+        // Check if error is about pending approval
+        if (response.error && response.error.includes('pending admin approval')) {
+          toast({
+            title: "Account Pending Approval",
+            description: "Your employer account is still under review. Please wait for admin approval.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: response.error || "Authentication failed",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error: any) {
       toast({
@@ -592,7 +601,7 @@ const Auth = () => {
                       <Building className="w-4 h-4 text-primary" />
                       I am a
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setFormData({...formData, role: "student"})}
@@ -619,20 +628,10 @@ const Auth = () => {
                         <div className="font-medium">Employer</div>
                         <div className="text-xs text-muted-foreground mt-1">Posting opportunities</div>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData({...formData, role: "admin"})}
-                        className={`p-4 rounded-xl border-2 transition-all ${
-                          formData.role === "admin"
-                            ? "border-purple-500 bg-purple-500/10 text-purple-600"
-                            : "border-border hover:border-purple-500/50 bg-background/50"
-                        }`}
-                      >
-                        <Shield className="w-6 h-6 mx-auto mb-2" />
-                        <div className="font-medium">Admin</div>
-                        <div className="text-xs text-muted-foreground mt-1">Platform management</div>
-                      </button>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {formData.role === "employer" && "⚠️ Employer accounts require admin approval before accessing the platform."}
+                    </p>
                   </div>
                   
                   {/* Terms and Conditions Checkbox */}
@@ -867,12 +866,22 @@ const Auth = () => {
             const userData = AuthService.getCurrentUserFromStorage();
             if (userData) {
               setUser(userData);
+              
+              // Check if user is employer pending approval
+              if (userData.role === 'employer' && !userData.isApproved) {
+                toast({
+                  title: "Registration Successful",
+                  description: "Your account has been created! Redirecting to approval status..."
+                });
+                navigate("/pending-approval");
+              } else {
+                toast({
+                  title: "Success",
+                  description: "Account verified successfully! You can now access all features."
+                });
+                navigate("/");
+              }
             }
-            toast({
-              title: "Success",
-              description: "Account verified successfully! You can now access all features."
-            });
-            navigate("/");
           }}
         />
 

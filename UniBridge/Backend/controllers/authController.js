@@ -1,17 +1,24 @@
 import User from '../models/User.js';
 import { createNotification } from '../utils/notificationHelper.js';
+import { sendVerificationOTPEmail } from '../config/email.js';
 import { generateToken } from '../config/jwt.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-// In production, you would use nodemailer or similar service
-// For now, we'll log the verification link to console
 
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
 const register = async (req, res, next) => {
   try {
-    const { firstName, lastName, email, password, phone, address, role = 'student' } = req.body;
+    const { firstName, lastName, email, password, phone, address, role = 'student', companyInfo } = req.body;
+
+    // Prevent admin registration - only existing admins can create new admins
+    if (role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Admin registration is not allowed. Contact system administrator.',
+      });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -22,6 +29,10 @@ const register = async (req, res, next) => {
       });
     }
 
+    // Determine approval status based on role
+    const isApproved = role === 'student' ? true : false; // Students auto-approved, employers need approval
+    const approvalStatus = role === 'student' ? 'approved' : 'pending';
+
     // Create user (without saving yet)
     const user = new User({
       firstName,
@@ -31,6 +42,9 @@ const register = async (req, res, next) => {
       phone,
       address,
       role,
+      isApproved,
+      approvalStatus,
+      companyInfo: role === 'employer' ? companyInfo : undefined,
     });
 
     // Generate OTP
@@ -39,12 +53,28 @@ const register = async (req, res, next) => {
     // Save user with OTP
     await user.save();
 
-    // In production, send OTP via email/SMS
-    // For development, log the OTP
+    // Send OTP email
+    try {
+      await sendVerificationOTPEmail(email, otp, firstName);
+      console.log('✅ Verification OTP email sent to:', email);
+    } catch (emailError) {
+      console.error('❌ Failed to send OTP email:', emailError.message);
+      // Continue registration even if email fails - OTP is logged for development
+    }
+
+    // Log OTP for development/testing
     console.log('=== OTP VERIFICATION ===');
     console.log('OTP for', email, ':', otp);
     console.log('OTP expires in 10 minutes');
     console.log('=========================');
+
+    // If employer registration, notify admins (optional - can be implemented later)
+    if (role === 'employer') {
+      console.log('=== EMPLOYER REGISTRATION ===');
+      console.log('New employer registration requires approval:', email);
+      console.log('Company:', companyInfo?.companyName);
+      console.log('=============================');
+    }
 
     // Generate auth token (user can login but account is not verified)
     const token = generateToken(user._id);
@@ -52,7 +82,9 @@ const register = async (req, res, next) => {
     res.status(201).json({
       success: true,
       token,
-      message: 'Account created successfully. Please check your email for the OTP.',
+      message: role === 'employer' 
+        ? 'Account created successfully. Please check your email for OTP. Your account will be activated after admin approval.'
+        : 'Account created successfully. Please check your email for the OTP.',
       data: {
         user: user.getPublicProfile(),
       },
@@ -94,6 +126,15 @@ const login = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         error: 'Invalid credentials',
+      });
+    }
+
+    // Check if employer is approved
+    if (user.role === 'employer' && !user.isApproved) {
+      return res.status(403).json({
+        success: false,
+        error: 'Your employer account is pending admin approval. Please wait for approval before logging in.',
+        approvalStatus: user.approvalStatus,
       });
     }
 

@@ -24,6 +24,7 @@ import CVBuilder from "./pages/CVBuilder";
 import Payment from "./pages/Payment";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
+import PendingApproval from "./pages/PendingApproval";
 import NotFound from "./pages/NotFound";
 // Admin Pages
 import AdminDashboard from "./pages/Admin/Dashboard";
@@ -109,6 +110,7 @@ const App = () => {
               <Route path="/contact" element={<Layout><ContactUs /></Layout>} />
               <Route path="/feedback" element={<Layout><Feedback /></Layout>} />
               <Route path="/auth" element={<Layout showFooter={false}><Auth /></Layout>} />
+              <Route path="/pending-approval" element={<Layout showFooter={false}><PendingApproval /></Layout>} />
               <Route path="/profile" element={<Layout><Profile /></Layout>} />
               <Route path="/profile/:section" element={<Layout><Profile /></Layout>} />
               
