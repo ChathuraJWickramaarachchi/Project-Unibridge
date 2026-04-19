@@ -175,7 +175,7 @@ const Navbar = () => {
               )}
 
               {/* Company Panel Link for Employers */}
-              {role === "employer" && (
+              {role === "employer" && user?.isApproved && (
                 <div className="flex items-center gap-2">
                   <NotificationBell />
                   <ThemeToggle />

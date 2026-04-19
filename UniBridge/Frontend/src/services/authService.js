@@ -139,42 +139,66 @@ class AuthService {
   }
 
   async forgotPassword(email) {
-    const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email }),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
 
-    const data = await response.json();
-    return data;
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      const msg = err.message || 'Failed to send OTP';
+      if (msg === 'Failed to fetch') {
+        throw new Error('Unable to contact server. Please ensure the backend is running.');
+      }
+      throw new Error(msg);
+    }
   }
 
   async verifyResetOTP(email, otp) {
-    const response = await fetch(`${API_BASE_URL}/auth/verify-reset-otp`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, otp }),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-reset-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp }),
+      });
 
-    const data = await response.json();
-    return data;
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      const msg = err.message || 'Failed to verify OTP';
+      if (msg === 'Failed to fetch') {
+        throw new Error('Unable to contact server. Please ensure the backend is running.');
+      }
+      throw new Error(msg);
+    }
   }
 
   async resetPassword(token, newPassword) {
-    const response = await fetch(`${API_BASE_URL}/auth/reset-password/${token}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ password: newPassword }),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password/${token}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password: newPassword }),
+      });
 
-    const data = await response.json();
-    return data;
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      const msg = err.message || 'Failed to reset password';
+      if (msg === 'Failed to fetch') {
+        throw new Error('Unable to contact server. Please ensure the backend is running.');
+      }
+      throw new Error(msg);
+    }
   }
 
   async verifyOTP(email, otp) {

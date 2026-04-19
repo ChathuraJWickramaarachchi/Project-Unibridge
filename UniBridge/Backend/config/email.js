@@ -3,11 +3,17 @@ import nodemailer from 'nodemailer';
 // Create transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use STARTTLS (not SSL on port 465)
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS, // App Password (not regular password)
     },
+    tls: {
+      rejectUnauthorized: false, // Avoid self-signed cert errors on some networks
+    },
+    family: 4, // Force IPv4 to avoid ECONNREFUSED on IPv6
   });
 };
 

@@ -57,7 +57,7 @@ const PendingApproval = () => {
                   Your employer account is under review
                 </h3>
                 <p className="text-amber-800 dark:text-amber-200 text-sm leading-relaxed">
-                  Thank you for registering as an employer on UniBridge! Our admin team is currently 
+                  Thank you for registering as an employer on UniBridge! Our admin team is currently
                   reviewing your application. This process typically takes 24-48 hours.
                 </p>
               </div>
@@ -67,7 +67,7 @@ const PendingApproval = () => {
           {/* What's Next Section */}
           <div className="space-y-4 mb-8">
             <h2 className="text-xl font-semibold text-foreground">What happens next?</h2>
-            
+
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
@@ -98,7 +98,7 @@ const PendingApproval = () => {
           {/* Info Box */}
           <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              <strong>Need help?</strong> If you have any questions or concerns about your application, 
+              <strong>Need help?</strong> If you have any questions or concerns about your application,
               please contact our support team at <a href="mailto:support@unibridge.com" className="underline font-medium">support@unibridge.com</a>
             </p>
           </div>

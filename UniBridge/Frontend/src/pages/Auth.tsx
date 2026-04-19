@@ -70,7 +70,12 @@ const Auth = () => {
     { icon: Star, text: "Personalized recommendations" },
   ];
 
-  if (isAuthenticated && user) return <Navigate to="/" replace />;
+  if (isAuthenticated && user) {
+    if (user.role === 'employer' && !user.isApproved) {
+      return <Navigate to="/pending-approval" replace />;
+    }
+    return <Navigate to="/" replace />;
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
