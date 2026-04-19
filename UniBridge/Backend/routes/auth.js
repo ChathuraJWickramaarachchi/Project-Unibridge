@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, getMe, changePassword, forgotPassword, resetPassword, verifyOTP } from '../controllers/authController.js';
+import { register, login, getMe, changePassword, forgotPassword, resetPassword, verifyOTP, verifyForgotPasswordOTP, resetPasswordWithOTP } from '../controllers/authController.js';
 import { passport, googleCallback } from '../controllers/googleAuthController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -15,6 +15,8 @@ router.post('/change-password', protect, changePassword);
 router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:resettoken', resetPassword);
 router.post('/verify-otp', verifyOTP);
+router.post('/verify-forgot-password-otp', verifyForgotPasswordOTP); // New
+router.post('/reset-password-otp', resetPasswordWithOTP); // New
 
 // Google OAuth routes
 router.get('/google', passport.authenticate('google', {

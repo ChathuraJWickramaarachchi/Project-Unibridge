@@ -222,7 +222,7 @@ const CompanyExam = () => {
   const openEditDialog = (exam: ExamSchedule) => {
     setEditingExam(exam);
     setFormData({
-      jobId: exam.jobId._id,
+      jobId: exam.jobId?._id || "",
       studentIds: exam.studentIds?.map(s => s._id) || [],
       examDate: exam.examDate,
       examTime: exam.examTime,
@@ -397,9 +397,9 @@ const CompanyExam = () => {
                       <tr className="border-b hover:bg-muted/50">
                         <td className="py-4 pr-4">
                           <div>
-                            <div className="font-medium">{exam.jobId.title}</div>
+                            <div className="font-medium">{exam.jobId?.title || 'Deleted Position'}</div>
                             <div className="text-xs text-muted-foreground">
-                              {exam.jobId.type}
+                              {exam.jobId?.type || 'N/A'}
                             </div>
                           </div>
                         </td>

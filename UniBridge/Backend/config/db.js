@@ -44,6 +44,11 @@ const resolveSrvUri = (mongoUri) => {
 };
 
 const connectDB = async () => {
+  // If already connected, do nothing
+  if (mongoose.connection.readyState === 1) {
+    return true;
+  }
+
   try {
     console.log('Attempting to connect to MongoDB...');
     console.log('MongoDB URI:', 'Provided (hidden for security)');

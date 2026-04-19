@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { jobService } from "@/services/jobService";
 import { departmentService } from "@/services/departmentService";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,7 @@ interface RecentJob {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated, role } = useAuth();
   const [stats, setStats] = useState<Stats>({
     totalJobs: 0,
     internships: 0,
@@ -61,6 +63,14 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      
+      // Check if user is authenticated and has correct role
+      if (!isAuthenticated || (!role || (role !== 'employer' && role !== 'admin'))) {
+        toast.error("You must be logged in as an employer to view this dashboard");
+        navigate('/login');
+        return;
+      }
+      
       const [jobStatsRes, jobsRes, deptRes] = await Promise.all([
         jobService.getJobStats(),
         jobService.getJobs({ limit: 5 }),
@@ -68,17 +78,19 @@ const Dashboard = () => {
       ]);
 
       if (jobStatsRes.success) {
-        const byType = jobStatsRes.data.byType;
+        const byType = jobStatsRes.data.byType || [];
         setStats({
           totalJobs: byType.reduce((acc: number, item: any) => acc + item.count, 0),
           internships: byType.find((item: any) => item._id === "Internship")?.count || 0,
           permanentJobs: byType.find((item: any) => item._id === "Permanent")?.count || 0,
-          totalApplicants: jobStatsRes.data.totalApplicants,
+          totalApplicants: jobStatsRes.data.totalApplicants || 0,
           activeJobs: byType.reduce((acc: number, item: any) => acc + item.active, 0),
           expiredJobs:
             byType.reduce((acc: number, item: any) => acc + item.count, 0) -
             byType.reduce((acc: number, item: any) => acc + item.active, 0),
         });
+      } else {
+        toast.error("Failed to fetch job statistics");
       }
 
       if (jobsRes.success) {

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Test</title>
+</head>
+<body>
+    <h1>Authentication Test</h1>
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="testDashboard()">Test Dashboard API</button>
+    <button onclick="checkToken()">Check Token</button>
+    <div id="results"></div>
+
+    <script>
+        async function testLogin() {
+            try {
+                const response = await fetch('http://localhost:5001/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'employer@test.com',
+                        password: 'password123'
+                    })
+                });
+                
+                const data = await response.json();
+                document.getElementById('results').innerHTML = `
+                    <h3>Login Response:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                if (data.success && data.token) {
+                    localStorage.setItem('token', data.token);
+                    console.log('Token saved:', data.token);
+                }
+            } catch (error) {
+                document.getElementById('results').innerHTML = `
+                    <h3>Login Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+
+        async function testDashboard() {
+            const token = localStorage.getItem('token');
+            console.log('Testing dashboard with token:', token?.substring(0, 20) + '...');
+            
+            try {
+                const response = await fetch('http://localhost:5001/api/jobs/stats', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                document.getElementById('results').innerHTML = `
+                    <h3>Dashboard API Response:</h3>
+                    <pre>Status: ${response.status}</pre>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('results').innerHTML = `
+                    <h3>Dashboard API Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+
+        function checkToken() {
+            const token = localStorage.getItem('token');
+            document.getElementById('results').innerHTML = `
+                <h3>Token Check:</h3>
+                <p>Token exists: ${!!token}</p>
+                <p>Token value: ${token ? token.substring(0, 50) + '...' : 'null'}</p>
+            `;
+        }
+    </script>
+</body>
+</html>

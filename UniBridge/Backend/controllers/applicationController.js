@@ -129,6 +129,8 @@ const getJobApplications = async (req, res) => {
       .populate('jobId', 'title type location salary departmentId')
       .sort({ appliedDate: -1 });
 
+    console.log(`Fetched ${applications.length} applications for jobId: ${req.params.jobId}`);
+
     res.status(200).json({ success: true, count: applications.length, data: applications });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error fetching applications', error: error.message });

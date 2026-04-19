@@ -3,12 +3,16 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_A
 class AuthService {
   async register(userData) {
     try {
+      // Create a copy and lowercase email
+      const dataToSend = { ...userData };
+      if (dataToSend.email) dataToSend.email = dataToSend.email.trim().toLowerCase();
+
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(dataToSend),
       });
 
       if (!response.ok) {
@@ -36,12 +40,16 @@ class AuthService {
 
   async login(credentials) {
     try {
+      // Create a copy and lowercase email
+      const dataToSend = { ...credentials };
+      if (dataToSend.email) dataToSend.email = dataToSend.email.trim().toLowerCase();
+
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(credentials),
+        body: JSON.stringify(dataToSend),
       });
 
       if (!response.ok) {
@@ -143,7 +151,7 @@ class AuthService {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
     });
 
     const data = await response.json();
@@ -163,13 +171,39 @@ class AuthService {
     return data;
   }
 
+  async verifyForgotPasswordOTP(email, otp) {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-forgot-password-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email: email.trim().toLowerCase(), otp }),
+    });
+
+    const data = await response.json();
+    return data;
+  }
+
+  async resetPasswordWithOTP(email, otp, password) {
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email: email.trim().toLowerCase(), otp, password }),
+    });
+
+    const data = await response.json();
+    return data;
+  }
+
   async verifyOTP(email, otp) {
     const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, otp }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), otp }),
     });
 
     const data = await response.json();

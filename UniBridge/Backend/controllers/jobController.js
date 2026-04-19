@@ -118,6 +118,8 @@ const getJobs = async (req, res) => {
       .populate('applicants', 'firstName lastName email')
       .sort({ isFeatured: -1, createdAt: -1 });
 
+    console.log(`Fetched ${jobs.length} jobs for company: ${companyId}`);
+
     res.status(200).json({
       success: true,
       count: jobs.length,

@@ -638,8 +638,8 @@ const CVBuilder = () => {
                     progressPct === 100
                       ? "linear-gradient(90deg,#16a34a,#4ade80)"
                       : progressPct >= 60
-                      ? "linear-gradient(90deg,#ca8a04,#facc15)"
-                      : "linear-gradient(90deg,#dc2626,#f87171)",
+                        ? "linear-gradient(90deg,#ca8a04,#facc15)"
+                        : "linear-gradient(90deg,#dc2626,#f87171)",
                 }}
               />
             </div>

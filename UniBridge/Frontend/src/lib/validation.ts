@@ -154,3 +154,17 @@ export const validateCurrentPassword = (currentPassword: string): ValidationResu
   }
   return { isValid: true };
 };
+
+// Phone number validation
+export const validatePhone = (phone: string): ValidationResult => {
+  if (!phone) {
+    return { isValid: false, error: "Phone number is required" };
+  }
+  if (!/^\d+$/.test(phone)) {
+    return { isValid: false, error: "Phone number must contain digits only" };
+  }
+  if (phone.length < 7 || phone.length > 15) {
+    return { isValid: false, error: "Phone number must be between 7 and 15 digits" };
+  }
+  return { isValid: true };
+};

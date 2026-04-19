@@ -2,13 +2,13 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  GraduationCap, 
-  Mail, 
-  Lock, 
-  User, 
-  Building, 
-  ArrowRight, 
+import {
+  GraduationCap,
+  Mail,
+  Lock,
+  User,
+  Building,
+  ArrowRight,
   Sparkles,
   Eye,
   EyeOff,
@@ -18,7 +18,8 @@ import {
   Star,
   Shield,
   Phone,
-  MapPin
+  MapPin,
+  AlertCircle
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,8 @@ import {
   validateEmail,
   validatePassword,
   validateName,
+  validatePhone,
+  type ValidationResult,
 } from "@/lib/validation";
 
 const Auth = () => {
@@ -55,6 +58,7 @@ const Auth = () => {
     confirmPassword: "",
     role: "student"
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const features = [
     { icon: Briefcase, text: "Access to 500+ internships" },
@@ -66,86 +70,81 @@ const Auth = () => {
   if (isAuthenticated && user) return <Navigate to="/" replace />;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
+    // Clear error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateField = (name: string, value: string) => {
+    let result: ValidationResult = { isValid: true };
+
+    switch (name) {
+      case "email":
+        result = validateEmail(value.trim());
+        break;
+      case "password":
+        result = validatePassword(value);
+        break;
+      case "firstName":
+        result = validateName(value.trim(), "First name");
+        break;
+      case "lastName":
+        result = validateName(value.trim(), "Last name");
+        break;
+      case "phone":
+        result = validatePhone(value.trim());
+        break;
+    }
+
+    if (!result.isValid) {
+      setFieldErrors(prev => ({ ...prev, [name]: result.error || "Invalid input" }));
+    } else {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+    return result.isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    const errors: Record<string, string> = {};
+
     if (isSignUp) {
-      // Validate form fields for sign up
-      const firstNameValidation = validateName(formData.firstName.trim(), "First name");
-      const lastNameValidation = validateName(formData.lastName.trim(), "Last name");
-      const emailValidation = validateEmail(formData.email.trim());
-      const passwordValidation = validatePassword(formData.password);
-      
-      if (!firstNameValidation.isValid) {
-        toast({
-          title: "Validation Error",
-          description: firstNameValidation.error,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (!lastNameValidation.isValid) {
-        toast({
-          title: "Validation Error",
-          description: lastNameValidation.error,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (!emailValidation.isValid) {
-        toast({
-          title: "Validation Error",
-          description: emailValidation.error,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (!passwordValidation.isValid) {
-        toast({
-          title: "Validation Error",
-          description: passwordValidation.error,
-          variant: "destructive"
-        });
-        return;
-      }
+      const v1 = validateName(formData.firstName.trim(), "First name");
+      if (!v1.isValid) errors.firstName = v1.error || "";
 
-      // Validate confirm password
+      const v2 = validateName(formData.lastName.trim(), "Last name");
+      if (!v2.isValid) errors.lastName = v2.error || "";
+
+      const v3 = validateEmail(formData.email.trim());
+      if (!v3.isValid) errors.email = v3.error || "";
+
+      const v4 = validatePassword(formData.password);
+      if (!v4.isValid) errors.password = v4.error || "";
+
       if (formData.password !== formData.confirmPassword) {
-        toast({
-          title: "Validation Error",
-          description: "Passwords do not match",
-          variant: "destructive"
-        });
-        return;
+        errors.confirmPassword = "Passwords do not match";
       }
 
-      // Validate phone number
-      if (!formData.phone.trim()) {
-        toast({
-          title: "Validation Error",
-          description: "Phone number is required",
-          variant: "destructive"
-        });
-        return;
-      }
+      const v5 = validatePhone(formData.phone.trim());
+      if (!v5.isValid) errors.phone = v5.error || "";
 
-      // Validate address
       if (!formData.address.trim()) {
-        toast({
-          title: "Validation Error",
-          description: "Address is required",
-          variant: "destructive"
-        });
-        return;
+        errors.address = "Address is required";
       }
 
       if (!agreedToTerms) {
@@ -157,31 +156,25 @@ const Auth = () => {
         return;
       }
     } else {
-      // Validate form fields for sign in
-      const emailValidation = validateEmail(formData.email.trim());
-      const passwordValidation = validatePassword(formData.password);
-      
-      if (!emailValidation.isValid) {
-        toast({
-          title: "Validation Error",
-          description: emailValidation.error,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (!passwordValidation.isValid) {
-        toast({
-          title: "Validation Error",
-          description: passwordValidation.error,
-          variant: "destructive"
-        });
-        return;
-      }
+      const v1 = validateEmail(formData.email.trim());
+      if (!v1.isValid) errors.email = v1.error || "";
+
+      const v2 = validatePassword(formData.password);
+      if (!v2.isValid) errors.password = v2.error || "";
     }
-    
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      toast({
+        title: "Validation Error",
+        description: "Please check the highlighted fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
-    
+
     try {
       let response;
       if (isSignUp) {
@@ -189,7 +182,7 @@ const Auth = () => {
       } else {
         response = await login(formData.email, formData.password);
       }
-      
+
       if (response.success) {
         if (isSignUp) {
           // For signup, show OTP verification dialog
@@ -231,8 +224,8 @@ const Auth = () => {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-gradient-to-r from-primary/10 to-accent/10"
-          animate={{ 
-            scale: [1, 1.3, 1], 
+          animate={{
+            scale: [1, 1.3, 1],
             rotate: [0, 180, 360],
             x: [0, 50, 0],
             y: [0, -30, 0]
@@ -241,8 +234,8 @@ const Auth = () => {
         />
         <motion.div
           className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full bg-gradient-to-l from-accent/10 to-primary/10"
-          animate={{ 
-            scale: [1.3, 1, 1.3], 
+          animate={{
+            scale: [1.3, 1, 1.3],
             rotate: [0, -180, -360],
             x: [0, -50, 0],
             y: [0, 30, 0]
@@ -280,7 +273,7 @@ const Auth = () => {
       >
         {/* Email Verification Banner */}
         <EmailVerificationBanner />
-        
+
         {/* Header Section */}
         <motion.div
           className="text-center mb-10"
@@ -296,8 +289,8 @@ const Auth = () => {
           >
             <GraduationCap className="w-10 h-10 text-primary-foreground" />
           </motion.div>
-          
-          <motion.h1 
+
+          <motion.h1
             className="text-4xl font-heading font-bold text-foreground mb-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -305,15 +298,15 @@ const Auth = () => {
           >
             UniBridge
           </motion.h1>
-          
-          <motion.p 
+
+          <motion.p
             className="text-lg text-muted-foreground max-w-md mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
           >
-            {isSignUp 
-              ? "Join our community and unlock amazing opportunities" 
+            {isSignUp
+              ? "Join our community and unlock amazing opportunities"
               : "Welcome back! Let's continue your journey"
             }
           </motion.p>
@@ -358,19 +351,13 @@ const Auth = () => {
                           value={formData.firstName}
                           onChange={handleChange}
                           placeholder="Enter your first name"
-                          className="pl-12 py-3 auth-input"
+                          className={`pl-12 py-3 auth-input ${fieldErrors.firstName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                           required
-                          onBlur={(e) => {
-                            const validation = validateName(e.target.value.trim(), "First name");
-                            if (!validation.isValid && e.target.value.trim()) {
-                              toast({
-                                title: "Validation Error",
-                                description: validation.error,
-                                variant: "destructive"
-                              });
-                            }
-                          }}
+                          onBlur={(e) => validateField("firstName", e.target.value)}
                         />
+                        {fieldErrors.firstName && (
+                          <p className="text-xs text-destructive mt-1 ml-1">{fieldErrors.firstName}</p>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -384,23 +371,17 @@ const Auth = () => {
                           value={formData.lastName}
                           onChange={handleChange}
                           placeholder="Enter your last name"
-                          className="pl-12 py-3 auth-input"
+                          className={`pl-12 py-3 auth-input ${fieldErrors.lastName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                           required
-                          onBlur={(e) => {
-                            const validation = validateName(e.target.value.trim(), "Last name");
-                            if (!validation.isValid && e.target.value.trim()) {
-                              toast({
-                                title: "Validation Error",
-                                description: validation.error,
-                                variant: "destructive"
-                              });
-                            }
-                          }}
+                          onBlur={(e) => validateField("lastName", e.target.value)}
                         />
+                        {fieldErrors.lastName && (
+                          <p className="text-xs text-destructive mt-1 ml-1">{fieldErrors.lastName}</p>
+                        )}
                       </div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                       <Mail className="w-4 h-4 text-primary" />
@@ -413,12 +394,16 @@ const Auth = () => {
                         value={formData.email}
                         onChange={handleChange}
                         placeholder="your.email@example.com"
-                        className="pl-12 py-3 auth-input"
+                        className={`pl-12 py-3 auth-input ${fieldErrors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         required
+                        onBlur={(e) => validateField("email", e.target.value)}
                       />
+                      {fieldErrors.email && (
+                        <p className="text-xs text-destructive mt-1 ml-1">{fieldErrors.email}</p>
+                      )}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                       <Lock className="w-4 h-4 text-primary" />
@@ -431,19 +416,13 @@ const Auth = () => {
                         value={formData.password}
                         onChange={handleChange}
                         placeholder="Create a strong password"
-                        className="pl-12 pr-12 py-3 auth-input"
+                        className={`pl-12 pr-12 py-3 auth-input ${fieldErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         required
-                        onBlur={(e) => {
-                          const validation = validatePassword(e.target.value);
-                          if (!validation.isValid && e.target.value) {
-                            toast({
-                              title: "Validation Error",
-                              description: validation.error,
-                              variant: "destructive"
-                            });
-                          }
-                        }}
+                        onBlur={(e) => validateField("password", e.target.value)}
                       />
+                      {fieldErrors.password && (
+                        <p className="text-xs text-destructive mt-1 ml-1">{fieldErrors.password}</p>
+                      )}
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
@@ -466,9 +445,23 @@ const Auth = () => {
                         value={formData.confirmPassword}
                         onChange={handleChange}
                         placeholder="Confirm your password"
-                        className="pl-12 pr-12 py-3 auth-input"
+                        className={`pl-12 pr-12 py-3 auth-input ${fieldErrors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         required
+                        onBlur={(e) => {
+                          if (e.target.value !== formData.password) {
+                            setFieldErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match" }));
+                          } else {
+                            setFieldErrors(prev => {
+                              const newErrors = { ...prev };
+                              delete newErrors.confirmPassword;
+                              return newErrors;
+                            });
+                          }
+                        }}
                       />
+                      {fieldErrors.confirmPassword && (
+                        <p className="text-xs text-destructive mt-1 ml-1">{fieldErrors.confirmPassword}</p>
+                      )}
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -487,13 +480,24 @@ const Auth = () => {
                     <div className="relative">
                       <Input
                         name="phone"
-                        type="tel"
+                        type="number"
                         value={formData.phone}
                         onChange={handleChange}
-                        placeholder="+94 11 587 469"
-                        className="pl-12 py-3 auth-input"
+                        placeholder="0115874691"
+                        className={`pl-12 py-3 auth-input ${fieldErrors.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         required
+                        onBlur={(e) => validateField("phone", e.target.value)}
                       />
+                      {fieldErrors.phone && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-destructive pointer-events-none">
+                          <AlertCircle className="w-5 h-5" />
+                        </div>
+                      )}
+                      {fieldErrors.phone && (
+                        <p className="text-[11px] font-medium text-destructive mt-1.5 animate-in fade-in slide-in-from-top-1">
+                          {fieldErrors.phone}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -509,12 +513,26 @@ const Auth = () => {
                         value={formData.address}
                         onChange={handleChange}
                         placeholder="Enter your address"
-                        className="pl-12 py-3 auth-input"
+                        className={`pl-12 py-3 auth-input ${fieldErrors.address ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         required
+                        onBlur={(e) => {
+                          if (!e.target.value.trim()) {
+                            setFieldErrors(prev => ({ ...prev, address: "Address is required" }));
+                          } else {
+                            setFieldErrors(prev => {
+                              const newErrors = { ...prev };
+                              delete newErrors.address;
+                              return newErrors;
+                            });
+                          }
+                        }}
                       />
+                      {fieldErrors.address && (
+                        <p className="text-xs text-destructive mt-1 ml-1">{fieldErrors.address}</p>
+                      )}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                       <Building className="w-4 h-4 text-primary" />
@@ -523,12 +541,11 @@ const Auth = () => {
                     <div className="grid grid-cols-3 gap-3">
                       <button
                         type="button"
-                        onClick={() => setFormData({...formData, role: "student"})}
-                        className={`p-4 rounded-xl border-2 transition-all ${
-                          formData.role === "student"
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border hover:border-primary/50 bg-background/50"
-                        }`}
+                        onClick={() => setFormData({ ...formData, role: "student" })}
+                        className={`p-4 rounded-xl border-2 transition-all ${formData.role === "student"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/50 bg-background/50"
+                          }`}
                       >
                         <User className="w-6 h-6 mx-auto mb-2" />
                         <div className="font-medium">Student</div>
@@ -536,12 +553,11 @@ const Auth = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setFormData({...formData, role: "employer"})}
-                        className={`p-4 rounded-xl border-2 transition-all ${
-                          formData.role === "employer"
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border hover:border-primary/50 bg-background/50"
-                        }`}
+                        onClick={() => setFormData({ ...formData, role: "employer" })}
+                        className={`p-4 rounded-xl border-2 transition-all ${formData.role === "employer"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/50 bg-background/50"
+                          }`}
                       >
                         <Building className="w-6 h-6 mx-auto mb-2" />
                         <div className="font-medium">Employer</div>
@@ -549,12 +565,11 @@ const Auth = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setFormData({...formData, role: "admin"})}
-                        className={`p-4 rounded-xl border-2 transition-all ${
-                          formData.role === "admin"
-                            ? "border-purple-500 bg-purple-500/10 text-purple-600"
-                            : "border-border hover:border-purple-500/50 bg-background/50"
-                        }`}
+                        onClick={() => setFormData({ ...formData, role: "admin" })}
+                        className={`p-4 rounded-xl border-2 transition-all ${formData.role === "admin"
+                          ? "border-purple-500 bg-purple-500/10 text-purple-600"
+                          : "border-border hover:border-purple-500/50 bg-background/50"
+                          }`}
                       >
                         <Shield className="w-6 h-6 mx-auto mb-2" />
                         <div className="font-medium">Admin</div>
@@ -562,7 +577,7 @@ const Auth = () => {
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* Terms and Conditions Checkbox */}
                   <div className="flex items-start gap-3">
                     <Checkbox
@@ -583,9 +598,9 @@ const Auth = () => {
                     </label>
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full py-3 text-base font-semibold group auth-button" 
+                  <Button
+                    type="submit"
+                    className="w-full py-3 text-base font-semibold group auth-button"
                     disabled={loading}
                     size="lg"
                   >
@@ -634,22 +649,16 @@ const Auth = () => {
                         value={formData.email}
                         onChange={handleChange}
                         placeholder="your.email@example.com"
-                        className="pl-12 py-3 auth-input"
+                        className={`pl-12 py-3 auth-input ${fieldErrors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         required
-                        onBlur={(e) => {
-                          const validation = validateEmail(e.target.value.trim());
-                          if (!validation.isValid && e.target.value.trim()) {
-                            toast({
-                              title: "Validation Error",
-                              description: validation.error,
-                              variant: "destructive"
-                            });
-                          }
-                        }}
+                        onBlur={(e) => validateField("email", e.target.value)}
                       />
+                      {fieldErrors.email && (
+                        <p className="text-xs text-destructive mt-1 ml-1">{fieldErrors.email}</p>
+                      )}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                       <Lock className="w-4 h-4 text-primary" />
@@ -662,25 +671,19 @@ const Auth = () => {
                         value={formData.password}
                         onChange={handleChange}
                         placeholder="Enter your password"
-                        className="pl-12 py-3 auth-input"
+                        className={`pl-12 py-3 auth-input ${fieldErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                         required
-                        onBlur={(e) => {
-                          const validation = validatePassword(e.target.value);
-                          if (!validation.isValid && e.target.value) {
-                            toast({
-                              title: "Validation Error",
-                              description: validation.error,
-                              variant: "destructive"
-                            });
-                          }
-                        }}
+                        onBlur={(e) => validateField("password", e.target.value)}
                       />
+                      {fieldErrors.password && (
+                        <p className="text-xs text-destructive mt-1 ml-1">{fieldErrors.password}</p>
+                      )}
                     </div>
                   </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full py-3 text-base font-semibold group auth-button" 
+
+                  <Button
+                    type="submit"
+                    className="w-full py-3 text-base font-semibold group auth-button"
                     disabled={loading}
                     size="lg"
                   >
@@ -736,7 +739,7 @@ const Auth = () => {
                     </svg>
                     Sign in with Google
                   </Button>
-                  
+
                   <div className="text-center pt-2">
                     <button
                       type="button"
@@ -778,15 +781,15 @@ const Auth = () => {
         >
           <p>© 2026 UniBridge. All rights reserved.</p>
         </motion.div>
-        
-        <PasswordResetDialog 
-          open={showResetDialog} 
-          onOpenChange={setShowResetDialog} 
+
+        <PasswordResetDialog
+          open={showResetDialog}
+          onOpenChange={setShowResetDialog}
         />
-        
-        <OTPVerificationDialog 
-          open={showOTPDialog} 
-          onOpenChange={setShowOTPDialog} 
+
+        <OTPVerificationDialog
+          open={showOTPDialog}
+          onOpenChange={setShowOTPDialog}
           email={pendingUserEmail}
           onVerificationSuccess={(token) => {
             // Store the new token
