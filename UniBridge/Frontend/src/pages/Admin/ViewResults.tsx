@@ -58,7 +58,7 @@ const ViewResults = () => {
     console.log('ViewResults component mounted');
     initializeData();
   }, []);
-  
+
   useEffect(() => {
     console.log('Loading state changed:', loading);
   }, [loading]);
@@ -72,7 +72,7 @@ const ViewResults = () => {
     } catch (e) {
       console.error('Failed to load exams:', e);
     }
-    
+
     try {
       console.log('Loading stats...');
       await loadStats();
@@ -80,7 +80,7 @@ const ViewResults = () => {
     } catch (e) {
       console.error('Failed to load stats:', e);
     }
-    
+
     try {
       console.log('Loading results...');
       await loadAllResults();
@@ -115,12 +115,12 @@ const ViewResults = () => {
   const loadStats = async () => {
     try {
       setStatsLoading(true);
-      const response = await examService.getNewResultsStatistics();
-      console.log('getNewResultsStatistics response:', response);
+      const response = await examService.getExamResultsStatistics();
+      console.log('getExamResultsStatistics response:', response);
       if (response.success) {
         setStats(response.data);
       } else {
-        console.warn('getNewResultsStatistics returned success:false');
+        console.warn('getExamResultsStatistics returned success:false');
       }
     } catch (error: any) {
       console.error('Error loading stats:', error);
@@ -133,13 +133,28 @@ const ViewResults = () => {
     try {
       setResultsLoading(true);
       setError(null);
-      const response = await examService.getAllNewResults();
-      console.log('getAllNewResults response:', response);
-      
+      const response = await examService.getAllExamResults();
+      console.log('getAllExamResults response:', response);
+
       if (response.success) {
-        setResults(response.data);
+        // Transform the data to match the expected interface
+        const transformedResults = response.data.map((result: any) => ({
+          _id: result._id,
+          studentName: result.studentName,
+          studentEmail: result.studentEmail,
+          examTitle: result.examName,
+          score: result.score,
+          status: result.result,
+          percentage: result.percentage,
+          correctAnswers: 0, // Not available in exam_results
+          totalQuestions: 0, // Not available in exam_results
+          duration: 0, // Not available in exam_results
+          submittedAt: result.submittedAt,
+          createdAt: result.createdAt
+        }));
+        setResults(transformedResults);
       } else {
-        console.warn('getAllNewResults returned success:false');
+        console.warn('getAllExamResults returned success:false');
       }
     } catch (error: any) {
       console.error('Error loading results:', error);
@@ -167,11 +182,34 @@ const ViewResults = () => {
     try {
       setResultsLoading(true);
       setError(null);
-      const response = await examService.getNewResultsByExam(examId);
-      console.log('getNewResultsByExam response:', response);
+
+      // Find the exam name from the selected exam ID
+      const selectedExamData = exams.find(exam => exam._id === examId);
+      if (!selectedExamData) {
+        console.error('Selected exam not found');
+        return;
+      }
+
+      const response = await examService.getExamResultsByExam(selectedExamData.title);
+      console.log('getExamResultsByExam response:', response);
 
       if (response.success) {
-        setResults(response.data);
+        // Transform the data to match the expected interface
+        const transformedResults = response.data.map((result: any) => ({
+          _id: result._id,
+          studentName: result.studentName,
+          studentEmail: result.studentEmail,
+          examTitle: result.examName,
+          score: result.score,
+          status: result.result,
+          percentage: result.percentage,
+          correctAnswers: 0, // Not available in exam_results
+          totalQuestions: 0, // Not available in exam_results
+          duration: 0, // Not available in exam_results
+          submittedAt: result.submittedAt,
+          createdAt: result.createdAt
+        }));
+        setResults(transformedResults);
       }
     } catch (error: any) {
       console.error('Error loading exam results:', error);
@@ -370,7 +408,7 @@ const ViewResults = () => {
                       <TableCell className="font-medium">{result.examTitle}</TableCell>
                       <TableCell className="text-right">
                         <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm">
-                          {result.correctAnswers}/{result.totalQuestions}
+                          {result.correctAnswers || 'N/A'}/{result.totalQuestions || 'N/A'}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -382,7 +420,7 @@ const ViewResults = () => {
                         {getStatusBadge(result.status)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {result.duration ? result.duration : '-'}
+                        {result.duration ? result.duration : 'N/A'}
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
                         {formatDate(result.submittedAt)}
@@ -407,13 +445,13 @@ const ViewResults = () => {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-gray-600 text-sm mb-1">Average Correct Answers</p>
                 <p className="text-2xl font-bold">
-                  {(results.reduce((sum, r) => sum + r.correctAnswers, 0) / results.length).toFixed(1)}
+                  {results.some(r => r.correctAnswers) ? (results.reduce((sum, r) => sum + (r.correctAnswers || 0), 0) / results.filter(r => r.correctAnswers).length).toFixed(1) : 'N/A'}
                 </p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-gray-600 text-sm mb-1">Average Time Taken</p>
                 <p className="text-2xl font-bold">
-                  {(results.reduce((sum, r) => sum + r.duration, 0) / results.length).toFixed(0)} min
+                  {results.some(r => r.duration) ? (results.reduce((sum, r) => sum + (r.duration || 0), 0) / results.filter(r => r.duration).length).toFixed(0) + ' min' : 'N/A'}
                 </p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">

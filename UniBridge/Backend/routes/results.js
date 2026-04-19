@@ -17,9 +17,9 @@ router.use(protect);
 const getAllResults = async (req, res) => {
   try {
     const { examId, studentId } = req.query;
-    
+
     console.log('GET /api/results - Query params:', { examId, studentId });
-    
+
     // Build filter object
     const filter = {};
     if (examId) filter.examId = examId;
@@ -194,20 +194,20 @@ const getResultById = async (req, res) => {
 const getResultsStatistics = async (req, res) => {
   try {
     console.log('GET /api/results/stats/summary');
-    
+
     const results = await Result.find().lean();
-    
+
     console.log(`Found ${results.length} results for statistics`);
-    
+
     const totalAttempts = results.length;
     const passedAttempts = results.filter(r => r.status === 'PASS').length;
     const failedAttempts = results.filter(r => r.status === 'FAIL').length;
-    
+
     const passPercentage = totalAttempts > 0 ? Math.round((passedAttempts / totalAttempts) * 100) : 0;
-    
+
     const percentages = results.map(r => r.percentage);
     const averageScore = percentages.length > 0 ? Math.round(percentages.reduce((a, b) => a + b, 0) / percentages.length) : 0;
-    
+
     const maxScore = percentages.length > 0 ? Math.max(...percentages) : 0;
     const minScore = percentages.length > 0 ? Math.min(...percentages) : 0;
 

@@ -14,18 +14,6 @@ const __dirname = path.dirname(__filename);
 // Load env vars
 dotenv.config();
 
-// Connect to database
-connectDB()
-  .then(() => {
-    console.log('✅ Database initialization complete');
-  })
-  .catch(err => {
-    console.error('❌ Database connection failed, but server will continue for testing');
-    console.error('⚠️  API endpoints requiring database will return errors');
-    console.error('🔧 Fix database connection for full functionality');
-    // Don't exit process - allow server to run for testing
-  });
-
 const app = express();
 
 // Initialize Passport
