@@ -644,25 +644,28 @@ const getExamById = async (req, res) => {
 // @access  Private/Admin
 const updateExam = async (req, res) => {
   try {
-    const { title, description, timeLimit, passingScore, status } = req.body;
+    const { id } = req.params;
+    const updateData = req.body;
 
-    let exam = await ExamTest.findById(req.params.id);
+    console.log(`[BACKEND] PUT /api/admin/exams/${id} - Request Received`);
+    console.log('[BACKEND] Request Body:', updateData);
+
+    // Ensure we are using findByIdAndUpdate as requested
+    const exam = await ExamTest.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
 
     if (!exam) {
+      console.log(`[BACKEND] Exam with ID ${id} not found`);
       return res.status(404).json({
         success: false,
         message: 'Exam not found'
       });
     }
 
-    // Update fields
-    if (title) exam.title = title;
-    if (description) exam.description = description;
-    if (timeLimit) exam.timeLimit = timeLimit;
-    if (passingScore !== undefined) exam.passingScore = passingScore;
-    if (status) exam.status = status;
-
-    exam = await exam.save();
+    console.log('[BACKEND] Exam updated successfully:', exam._id);
 
     res.status(200).json({
       success: true,
@@ -670,6 +673,7 @@ const updateExam = async (req, res) => {
       data: exam
     });
   } catch (error) {
+    console.error('[BACKEND] Error updating exam:', error.message);
     res.status(500).json({
       success: false,
       message: 'Error updating exam',
