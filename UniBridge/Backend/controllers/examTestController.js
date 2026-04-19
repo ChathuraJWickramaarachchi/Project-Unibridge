@@ -129,6 +129,9 @@ const submitExamResults = async (req, res) => {
           result: passFail.toUpperCase(),
           status: passFail.toUpperCase(),
           section: section,
+          correctAnswers: processedAnswers.filter(a => a.isCorrect).length,
+          totalQuestions: questions.length,
+          duration: duration || 0,
           submittedAt: new Date()
         },
         { upsert: true, new: true }
@@ -541,6 +544,9 @@ const secureSubmitExamResults = async (req, res) => {
           result: passFail.toUpperCase(),
           status: passFail.toUpperCase(),
           section: section,
+          correctAnswers: processedAnswers.filter(a => a.isCorrect).length,
+          totalQuestions: questions.length,
+          duration: duration || 0,
           submittedAt: new Date()
         },
         { upsert: true, new: true }

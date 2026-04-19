@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import examService from "@/services/examService";
-import { Loader2, Eye, TrendingUp, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, TrendingUp, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 interface Result {
   _id: string;
@@ -25,11 +25,11 @@ interface Result {
   studentEmail: string;
   examTitle: string;
   score: number;
-  status: 'PASS' | 'FAIL';
+  status: string;
   percentage: number;
+  section: string;
   correctAnswers: number;
   totalQuestions: number;
-  duration: number;
   submittedAt: string;
   createdAt: string;
 }
@@ -48,342 +48,206 @@ const ViewResults = () => {
   const [exams, setExams] = useState<any[]>([]);
   const [results, setResults] = useState<Result[]>([]);
   const [stats, setStats] = useState<Statistics | null>(null);
-  const [selectedExam, setSelectedExam] = useState("all");
+  const [currentExam, setCurrentExam] = useState("all");
+  const [currentSection, setCurrentSection] = useState("all");
   const [loading, setLoading] = useState(true);
   const [resultsLoading, setResultsLoading] = useState(false);
-  const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('ViewResults component mounted');
     initializeData();
   }, []);
 
-  useEffect(() => {
-    console.log('Loading state changed:', loading);
-  }, [loading]);
-
   const initializeData = async () => {
-    console.log('initializeData started');
-    try {
-      console.log('Loading exams...');
-      await loadExams();
-      console.log('Exams loaded successfully');
-    } catch (e) {
-      console.error('Failed to load exams:', e);
-    }
-
-    try {
-      console.log('Loading stats...');
-      await loadStats();
-      console.log('Stats loaded successfully');
-    } catch (e) {
-      console.error('Failed to load stats:', e);
-    }
-
-    try {
-      console.log('Loading results...');
-      await loadAllResults();
-      console.log('Results loaded successfully');
-    } catch (e) {
-      console.error('Failed to load results:', e);
-    }
-  };
-
-  const loadExams = async () => {
     try {
       setLoading(true);
-      const response = await examService.getAllAdminExams();
-      console.log('getAllAdminExams response:', response);
-      if (response.success) {
-        setExams(response.data);
-      } else {
-        console.warn('getAllAdminExams returned success:false');
+      // Load exams for the dropdown
+      const examResponse = await examService.getAllAdminExams();
+      if (examResponse.success) {
+        setExams(examResponse.data);
       }
-    } catch (error: any) {
-      console.error('Error loading exams:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load exams",
-        variant: "destructive"
-      });
+      
+      // Load initial results and stats
+      await fetchResults("all", "all");
+    } catch (e) {
+      console.error('Failed to initialize data:', e);
+      setError("Failed to load data");
     } finally {
       setLoading(false);
     }
   };
 
-  const loadStats = async () => {
-    try {
-      setStatsLoading(true);
-      const response = await examService.getExamResultsStatistics();
-      console.log('getExamResultsStatistics response:', response);
-      if (response.success) {
-        setStats(response.data);
-      } else {
-        console.warn('getExamResultsStatistics returned success:false');
-      }
-    } catch (error: any) {
-      console.error('Error loading stats:', error);
-    } finally {
-      setStatsLoading(false);
-    }
-  };
-
-  const loadAllResults = async () => {
+  const fetchResults = async (examId: string, section: string) => {
     try {
       setResultsLoading(true);
-      setError(null);
-      const response = await examService.getAllExamResults();
-      console.log('getAllExamResults response:', response);
+      const response = await examService.getAllNewResults(
+        examId === "all" ? undefined : examId,
+        undefined,
+        section === "all" ? undefined : section
+      );
 
       if (response.success) {
-        // Transform the data to match the expected interface
-        const transformedResults = response.data.map((result: any) => ({
-          _id: result._id,
-          studentName: result.studentName,
-          studentEmail: result.studentEmail,
-          examTitle: result.examName,
-          score: result.score,
-          status: result.result,
-          percentage: result.percentage,
-          correctAnswers: 0, // Not available in exam_results
-          totalQuestions: 0, // Not available in exam_results
-          duration: 0, // Not available in exam_results
-          submittedAt: result.submittedAt,
-          createdAt: result.createdAt
-        }));
-        setResults(transformedResults);
+        setResults(response.data);
+        if (response.statistics) {
+          setStats(response.statistics);
+        }
       } else {
-        console.warn('getAllExamResults returned success:false');
+        setError(response.message || "Failed to fetch results");
       }
-    } catch (error: any) {
-      console.error('Error loading results:', error);
-      setError(error.message || 'Failed to load results');
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load results",
-        variant: "destructive"
-      });
+    } catch (err: any) {
+      console.error('Error fetching results:', err);
+      setError(err.message || "An error occurred");
     } finally {
       setResultsLoading(false);
     }
   };
 
-  const handleExamChange = async (examId: string) => {
-    console.log('handleExamChange called with:', examId);
-    setSelectedExam(examId);
-
-    if (!examId || examId === "all") {
-      console.log('Loading all results');
-      await loadAllResults();
-      return;
-    }
-
-    try {
-      setResultsLoading(true);
-      setError(null);
-
-      // Find the exam name from the selected exam ID
-      const selectedExamData = exams.find(exam => exam._id === examId);
-      if (!selectedExamData) {
-        console.error('Selected exam not found');
-        return;
-      }
-
-      const response = await examService.getExamResultsByExam(selectedExamData.title);
-      console.log('getExamResultsByExam response:', response);
-
-      if (response.success) {
-        // Transform the data to match the expected interface
-        const transformedResults = response.data.map((result: any) => ({
-          _id: result._id,
-          studentName: result.studentName,
-          studentEmail: result.studentEmail,
-          examTitle: result.examName,
-          score: result.score,
-          status: result.result,
-          percentage: result.percentage,
-          correctAnswers: 0, // Not available in exam_results
-          totalQuestions: 0, // Not available in exam_results
-          duration: 0, // Not available in exam_results
-          submittedAt: result.submittedAt,
-          createdAt: result.createdAt
-        }));
-        setResults(transformedResults);
-      }
-    } catch (error: any) {
-      console.error('Error loading exam results:', error);
-      setError(error.message || 'Failed to load results');
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load results",
-        variant: "destructive"
-      });
-    } finally {
-      setResultsLoading(false);
-    }
+  const handleExamChange = (value: string) => {
+    setCurrentExam(value);
+    fetchResults(value, currentSection);
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const handleSectionChange = (value: string) => {
+    setCurrentSection(value);
+    fetchResults(currentExam, value);
   };
 
-  const getStatusBadge = (status: 'PASS' | 'FAIL') => {
-    if (status === 'PASS') {
-      return (
-        <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-          <CheckCircle className="w-4 h-4" />
-          Pass
-        </span>
-      );
-    } else {
-      return (
-        <span className="inline-flex items-center gap-1 bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
-          <XCircle className="w-4 h-4" />
-          Fail
-        </span>
-      );
-    }
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString();
   };
 
   const getPercentageColor = (percentage: number) => {
-    if (percentage >= 80) return 'text-green-600';
-    if (percentage >= 60) return 'text-blue-600';
-    if (percentage >= 40) return 'text-orange-600';
-    return 'text-red-600';
+    if (percentage >= 75) return "text-green-600";
+    if (percentage >= 50) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getStatusBadge = (status: string) => {
+    const s = String(status).toUpperCase();
+    if (s === 'PASS') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <CheckCircle className="w-3 h-3" /> PASS
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        <XCircle className="w-3 h-3" /> FAIL
+      </span>
+    );
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Eye className="w-8 h-8 text-blue-600" />
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-bold">Exam Results</h1>
-          <p className="text-gray-600 mt-1">Monitor and analyze student exam performance</p>
+          <h1 className="text-3xl font-bold font-heading text-gray-900">Exam Results Analytics</h1>
+          <p className="text-gray-500">Monitor student performance and exam statistics</p>
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      {!statsLoading && stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Attempts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600">{stats.totalAttempts}</div>
-            </CardContent>
-          </Card>
+      {/* Filters */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Filter Results</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Filter by Exam</label>
+              <Select value={currentExam} onValueChange={handleExamChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Exam" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Exams</SelectItem>
+                  {exams.map((exam) => (
+                    <SelectItem key={exam._id} value={exam._id}>
+                      {exam.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Filter by Section</label>
+              <Select value={currentSection} onValueChange={handleSectionChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Section" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sections</SelectItem>
+                  <SelectItem value="IT">IT (Information Technology)</SelectItem>
+                  <SelectItem value="SE">SE (Software Engineering)</SelectItem>
+                  <SelectItem value="QA">QA (Quality Assurance)</SelectItem>
+                  <SelectItem value="CS">CS (Computer Science)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card className="border-l-4 border-l-green-500">
+      {/* Main Stats */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-white hover:shadow-md transition">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Passed</CardTitle>
+              <CardDescription>Total Attempts</CardDescription>
+              <CardTitle className="text-3xl">{stats.totalAttempts}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">{stats.passedAttempts}</div>
-              <p className="text-xs text-gray-500 mt-1">{stats.passPercentage}% pass rate</p>
-            </CardContent>
           </Card>
-
-          <Card className="border-l-4 border-l-red-500">
+          <Card className="bg-white hover:shadow-md transition">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Failed</CardTitle>
+              <CardDescription>Average Score</CardDescription>
+              <CardTitle className="text-3xl font-bold text-blue-600">{stats.averageScore}%</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-600">{stats.failedAttempts}</div>
-            </CardContent>
           </Card>
-
-          <Card className="border-l-4 border-l-purple-500">
+          <Card className="bg-white hover:shadow-md transition">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Average Score</CardTitle>
+              <CardDescription>Highest Score</CardDescription>
+              <CardTitle className="text-3xl font-bold text-green-600">{stats.maxScore}%</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-600">{stats.averageScore}%</div>
-            </CardContent>
           </Card>
-
-          <Card className="border-l-4 border-l-orange-500">
+          <Card className="bg-white hover:shadow-md transition">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Score Range</CardTitle>
+              <CardDescription>Lowest Score</CardDescription>
+              <CardTitle className="text-3xl font-bold text-red-600">{stats.minScore}%</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-sm space-y-1">
-                <p>Max: <span className="font-bold text-green-600">{stats.maxScore}%</span></p>
-                <p>Min: <span className="font-bold text-red-600">{stats.minScore}%</span></p>
-              </div>
-            </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Filter Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            Filter Results
-          </CardTitle>
-          <CardDescription>Select an exam to view specific results or leave blank for all</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Select value={selectedExam} onValueChange={handleExamChange}>
-            <SelectTrigger className="w-full md:w-64">
-              <SelectValue placeholder="All exams" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Exams</SelectItem>
-              {exams.map((exam) => (
-                <SelectItem key={exam._id} value={exam._id}>
-                  {exam.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
       {/* Results Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Student Results</CardTitle>
-          <CardDescription>
-            {results.length} result(s) found
-            {selectedExam && selectedExam !== "all" && " for selected exam"}
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <CardTitle>Detailed Results</CardTitle>
+            <p className="text-sm text-gray-500">
+              {results.length} result(s) found
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-red-700">{error}</p>
-            </div>
-          )}
-
           {resultsLoading ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
           ) : results.length === 0 ? (
             <div className="text-center py-12">
               <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 text-lg">No results found</p>
-              <p className="text-gray-400 text-sm mt-1">Results will appear once students submit exams</p>
+              <p className="text-gray-400 text-sm mt-1">Try changing filters or wait for new submissions</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -396,7 +260,6 @@ const ViewResults = () => {
                     <TableHead className="text-right font-semibold">Correct/Total</TableHead>
                     <TableHead className="text-right font-semibold">Score</TableHead>
                     <TableHead className="text-center font-semibold">Status</TableHead>
-                    <TableHead className="text-right font-semibold">Duration (min)</TableHead>
                     <TableHead className="font-semibold">Submitted</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -408,7 +271,7 @@ const ViewResults = () => {
                       <TableCell className="font-medium">{result.examTitle}</TableCell>
                       <TableCell className="text-right">
                         <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm">
-                          {result.correctAnswers || 'N/A'}/{result.totalQuestions || 'N/A'}
+                          {result.correctAnswers ?? 'N/A'}/{result.totalQuestions ?? 'N/A'}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -418,9 +281,6 @@ const ViewResults = () => {
                       </TableCell>
                       <TableCell className="text-center">
                         {getStatusBadge(result.status)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {result.duration ? result.duration : 'N/A'}
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
                         {formatDate(result.submittedAt)}
@@ -441,23 +301,22 @@ const ViewResults = () => {
             <CardTitle>Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-gray-600 text-sm mb-1">Average Correct Answers</p>
                 <p className="text-2xl font-bold">
-                  {results.some(r => r.correctAnswers) ? (results.reduce((sum, r) => sum + (r.correctAnswers || 0), 0) / results.filter(r => r.correctAnswers).length).toFixed(1) : 'N/A'}
-                </p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-gray-600 text-sm mb-1">Average Time Taken</p>
-                <p className="text-2xl font-bold">
-                  {results.some(r => r.duration) ? (results.reduce((sum, r) => sum + (r.duration || 0), 0) / results.filter(r => r.duration).length).toFixed(0) + ' min' : 'N/A'}
+                  {results.some(r => r.correctAnswers !== undefined) 
+                    ? (results.reduce((sum, r) => sum + (r.correctAnswers || 0), 0) / results.filter(r => r.correctAnswers !== undefined).length).toFixed(1) 
+                    : 'N/A'}
                 </p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-gray-600 text-sm mb-1">Pass Rate</p>
                 <p className="text-2xl font-bold">
-                  {(results.filter(r => r.status === 'PASS').length / results.length * 100).toFixed(1)}%
+                  {stats ? stats.passPercentage : 0}% 
+                  <span className="text-sm text-gray-500 font-normal ml-2">
+                    ({stats?.passedAttempts} out of {results.length})
+                  </span>
                 </p>
               </div>
             </div>
