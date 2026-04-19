@@ -1,6 +1,6 @@
 import User from '../models/User.js';
 import { createNotification } from '../utils/notificationHelper.js';
-import { sendVerificationOTPEmail } from '../config/email.js';
+import { sendVerificationOTPEmail, sendOTPEmail } from '../config/email.js';
 import { generateToken } from '../config/jwt.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
@@ -259,7 +259,7 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-// @desc    Forgot password
+// @desc    Forgot password - Send OTP
 // @route   POST /api/auth/forgot-password
 // @access  Public
 const forgotPassword = async (req, res) => {
@@ -287,33 +287,31 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    console.log('Generating reset token for user:', user.email);
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    console.log('Reset token generated:', resetToken);
+    console.log('Generating OTP for password reset:', user.email);
+    // Generate OTP
+    const otp = user.generateOTP();
+    console.log('OTP generated:', otp);
     
-    // Hash token and set to resetPasswordToken field
-    user.resetPasswordToken = crypto
-      .createHash('sha256')
-      .update(resetToken)
-      .digest('hex');
-
-    console.log('Hashed token:', user.resetPasswordToken);
-    // Set expire
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
-    console.log('Token expiry set:', user.resetPasswordExpire);
-
+    // Save user with OTP
     await user.save({ validateBeforeSave: false });
-    console.log('User saved successfully');
+    console.log('User saved with OTP successfully');
 
-    // In a real application, you would send an email here
-    // For now, we'll return the token in the response
-    // In production, use nodemailer or similar service
-    
+    // Send OTP email
+    try {
+      await sendOTPEmail(email, otp);
+      console.log('✅ Password reset OTP email sent to:', email);
+    } catch (emailError) {
+      console.error('❌ Failed to send OTP email:', emailError.message);
+      // Log OTP for development/testing
+      console.log('=== PASSWORD RESET OTP ===');
+      console.log('OTP for', email, ':', otp);
+      console.log('OTP expires in 10 minutes');
+      console.log('==========================');
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Password reset token generated. In production, this would be sent via email.',
-      resetToken, // Remove this in production - only for development/testing
+      message: 'OTP sent to your email for password reset',
     });
   } catch (error) {
     console.error('Error in forgotPassword:', error);
@@ -421,6 +419,63 @@ const verifyOTP = async (req, res, next) => {
   }
 };
 
+// @desc    Verify OTP for password reset
+// @route   POST /api/auth/verify-reset-otp
+// @access  Public
+const verifyResetOTP = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    
+    // Validate input
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide email and OTP',
+      });
+    }
+
+    // Find user with this email and OTP
+    const user = await User.findOne({
+      email,
+      otp,
+      otpExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired OTP',
+      });
+    }
+
+    // Generate a temporary reset token for password update
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Hash token and set to resetPasswordToken field
+    user.resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Set expire
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+    
+    // Clear OTP after successful verification
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      resetToken,
+      message: 'OTP verified successfully. You can now reset your password.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   register,
   login,
@@ -429,4 +484,5 @@ export {
   forgotPassword,
   resetPassword,
   verifyOTP,
+  verifyResetOTP,
 };

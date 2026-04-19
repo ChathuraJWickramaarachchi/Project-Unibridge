@@ -151,6 +151,19 @@ class AuthService {
     return data;
   }
 
+  async verifyResetOTP(email, otp) {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-reset-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, otp }),
+    });
+
+    const data = await response.json();
+    return data;
+  }
+
   async resetPassword(token, newPassword) {
     const response = await fetch(`${API_BASE_URL}/auth/reset-password/${token}`, {
       method: 'PUT',
