@@ -304,10 +304,8 @@ const ViewResults = () => {
                     <TableHead className="py-5 font-bold text-slate-600 pl-6 uppercase text-[11px] tracking-widest">Student Name</TableHead>
                     <TableHead className="py-5 font-bold text-slate-600 uppercase text-[11px] tracking-widest">Email</TableHead>
                     <TableHead className="py-5 font-bold text-slate-600 uppercase text-[11px] tracking-widest text-center">Exam</TableHead>
-                    <TableHead className="py-5 font-bold text-slate-600 uppercase text-[11px] tracking-widest text-right">Correct/Total</TableHead>
                     <TableHead className="py-5 font-bold text-slate-600 uppercase text-[11px] tracking-widest text-right">Score</TableHead>
                     <TableHead className="py-5 font-bold text-slate-600 uppercase text-[11px] tracking-widest text-center">Status</TableHead>
-                    <TableHead className="py-5 font-bold text-slate-600 uppercase text-[11px] tracking-widest text-right">Duration (min)</TableHead>
                     <TableHead className="py-5 font-bold text-slate-600 uppercase text-[11px] tracking-widest pr-6">Submitted</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -318,20 +316,12 @@ const ViewResults = () => {
                       <TableCell className="py-4 text-sm text-slate-400 font-medium lowercase italic">{result.studentEmail}</TableCell>
                       <TableCell className="py-4 font-bold text-slate-600 text-center">{result.examTitle}</TableCell>
                       <TableCell className="py-4 text-right">
-                        <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-md text-xs font-bold ring-1 ring-blue-100">
-                          {result.correctAnswers !== undefined ? `${result.correctAnswers}/${result.totalQuestions}` : 'N/A/N/A'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-4 text-right">
                         <span className={`font-black text-lg ${getPercentageColor(result.percentage)}`}>
                           {result.percentage}%
                         </span>
                       </TableCell>
                       <TableCell className="py-4 text-center">
                         {getStatusBadge(result.status)}
-                      </TableCell>
-                      <TableCell className="py-4 text-right font-bold text-slate-400 shrink-0">
-                        {result.duration !== undefined ? `${result.duration}` : 'N/A'}
                       </TableCell>
                       <TableCell className="py-4 text-xs font-semibold text-slate-400 pr-6">
                         {formatDate(result.submittedAt)}
