@@ -48,6 +48,7 @@ import CompanyJobs from "./pages/CompanyManager/Jobs";
 import CompanyApplicants from "./pages/CompanyManager/Applicants";
 import CompanySettings from "./pages/CompanyManager/Settings";
 import CompanyExam from "./pages/CompanyManager/Exam";
+import ViewResult from "./pages/CompanyManager/ViewResult";
 // Student Pages
 import StudentExamSchedule from "./pages/StudentExamSchedule";
 // Public Pages
@@ -137,6 +138,8 @@ const App = () => {
               <Route path="/company/jobs" element={<CompanyManagerLayout><CompanyJobs /></CompanyManagerLayout>} />
               <Route path="/company/applicants" element={<CompanyManagerLayout><CompanyApplicants /></CompanyManagerLayout>} />
               <Route path="/company/exam" element={<CompanyManagerLayout><CompanyExam /></CompanyManagerLayout>} />
+              <Route path="/company/results" element={<CompanyManagerLayout><ViewResult /></CompanyManagerLayout>} />
+              <Route path="/company/results/:id" element={<CompanyManagerLayout><ViewResult /></CompanyManagerLayout>} />
               <Route path="/company/settings" element={<CompanyManagerLayout><CompanySettings /></CompanyManagerLayout>} />
               
               {/* Admin Routes */}
