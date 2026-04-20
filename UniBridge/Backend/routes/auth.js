@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, getMe, changePassword, forgotPassword, resetPassword, verifyOTP } from '../controllers/authController.js';
+import { register, login, getMe, changePassword, forgotPassword, resetPassword, verifyOTP, verifyResetOTP } from '../controllers/authController.js';
 import { passport, googleCallback } from '../controllers/googleAuthController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -13,6 +13,7 @@ router.post('/login', login);
 router.get('/me', protect, getMe);
 router.post('/change-password', protect, changePassword);
 router.post('/forgot-password', forgotPassword);
+router.post('/verify-reset-otp', verifyResetOTP);
 router.put('/reset-password/:resettoken', resetPassword);
 router.post('/verify-otp', verifyOTP);
 

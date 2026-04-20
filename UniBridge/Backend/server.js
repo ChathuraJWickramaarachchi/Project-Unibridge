@@ -56,6 +56,7 @@ import applicationRoutes from './routes/applications.js';
 import notificationRoutes from './routes/notifications.js';
 import examRoutes from './routes/exams.js';
 import paymentRoutes from './routes/payments.js';
+import twoFactorRoutes from './routes/twoFactor.js';
 import resultsRoutes from './routes/results.js';
 
 console.log('Auth routes:', authRoutes);
@@ -69,6 +70,7 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/2fa', twoFactorRoutes);
 app.use('/api/results', resultsRoutes);
 
 // Serve uploaded resumes statically

@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import Layout from "@/components/Layout";
 import OnboardingAnimation from "@/components/OnboardingAnimation";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -23,6 +24,7 @@ import CVBuilder from "./pages/CVBuilder";
 import Payment from "./pages/Payment";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
+import PendingApproval from "./pages/PendingApproval";
 import NotFound from "./pages/NotFound";
 // Admin Pages
 import AdminDashboard from "./pages/Admin/Dashboard";
@@ -81,11 +83,12 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
+      <ThemeProvider defaultTheme="system" storageKey="unibridge-theme">
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
             <Routes>
               {/* Secure Exam Routes (SEB) — must be before other routes */}
               <Route path="/secure-exam-login/:examId" element={<SecureExamLogin />} />
@@ -107,6 +110,7 @@ const App = () => {
               <Route path="/contact" element={<Layout><ContactUs /></Layout>} />
               <Route path="/feedback" element={<Layout><Feedback /></Layout>} />
               <Route path="/auth" element={<Layout showFooter={false}><Auth /></Layout>} />
+              <Route path="/pending-approval" element={<Layout showFooter={false}><PendingApproval /></Layout>} />
               <Route path="/profile" element={<Layout><Profile /></Layout>} />
               <Route path="/profile/:section" element={<Layout><Profile /></Layout>} />
               
@@ -163,6 +167,7 @@ const App = () => {
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };
