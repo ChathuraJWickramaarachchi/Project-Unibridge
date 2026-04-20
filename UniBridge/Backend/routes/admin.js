@@ -33,6 +33,11 @@ import {
   getResultDetails,
   getResultsStatistics
 } from '../controllers/resultsController.js';
+import {
+  getExamResultsStatistics,
+  getAllExamResults,
+  getExamResultsByExam
+} from '../controllers/examResultsController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -71,10 +76,9 @@ router.get('/questions/single/:id', getQuestionById);
 router.put('/questions/:id', updateQuestion);
 router.delete('/questions/:id', deleteQuestion);
 
-// Results Management
-router.get('/results/stats/summary', getResultsStatistics);
-router.get('/results/:examId/:email', getResultDetails);
-router.get('/results/:examId', getResultsByExam);
-router.get('/results', getAllResults);
+// Exam Results Management (from exam_results collection)
+router.get('/exam-results/stats', getExamResultsStatistics);
+router.get('/exam-results/exam/:examName', getExamResultsByExam);
+router.get('/exam-results', getAllExamResults);
 
 export default router;

@@ -21,12 +21,34 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const ViewExams = () => {
   const [exams, setExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Edit State
+  const [editingExam, setEditingExam] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    timeLimit: "",
+    passingScore: "",
+    status: "active"
+  });
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     loadExams();
@@ -47,6 +69,58 @@ const ViewExams = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditClick = (exam: any) => {
+    console.log("[FRONTEND] Edit button clicked for exam:", exam._id);
+    setEditingExam(exam);
+    setEditForm({
+      title: exam.title || "",
+      description: exam.description || "",
+      timeLimit: exam.timeLimit?.toString() || "",
+      passingScore: exam.passingScore?.toString() || "",
+      status: exam.status || "active"
+    });
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingExam) return;
+
+    try {
+      setUpdating(true);
+      console.log("[FRONTEND] Submitting update for exam:", editingExam._id);
+      
+      const payload = {
+        title: editForm.title,
+        description: editForm.description,
+        timeLimit: parseInt(editForm.timeLimit),
+        passingScore: parseInt(editForm.passingScore),
+        status: editForm.status
+      };
+
+      console.log("[FRONTEND] Update payload:", payload);
+      
+      const response = await examService.updateAdminExam(editingExam._id, payload);
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Exam updated successfully"
+        });
+        setEditingExam(null);
+        loadExams();
+      }
+    } catch (error: any) {
+      console.error("[FRONTEND] Update error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update exam",
+        variant: "destructive"
+      });
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -146,6 +220,7 @@ const ViewExams = () => {
                             variant="outline"
                             size="sm"
                             disabled={deleting}
+                            onClick={() => handleEditClick(exam)}
                           >
                             <Edit2 className="w-4 h-4" />
                           </Button>
@@ -188,6 +263,76 @@ const ViewExams = () => {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Exam Dialog */}
+      <Dialog open={!!editingExam} onOpenChange={() => setEditingExam(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Exam</DialogTitle>
+            <DialogDescription>
+              Update the details for "{editingExam?.title}"
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Exam Title</Label>
+              <Input
+                id="title"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="timeLimit">Time Limit (min)</Label>
+                <Input
+                  id="timeLimit"
+                  type="number"
+                  value={editForm.timeLimit}
+                  onChange={(e) => setEditForm({ ...editForm, timeLimit: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="passingScore">Pass Score (%)</Label>
+                <Input
+                  id="passingScore"
+                  type="number"
+                  max="100"
+                  value={editForm.passingScore}
+                  onChange={(e) => setEditForm({ ...editForm, passingScore: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => setEditingExam(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updating}>
+                {updating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
