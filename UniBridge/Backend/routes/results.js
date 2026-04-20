@@ -10,7 +10,7 @@ router.use(protect);
 /**
  * @desc    Get all results with statistics
  * @route   GET /api/results
- * @access  Private/Admin
+ * @access  Private/Admin or Private/Employer
  * @query   examId (optional) - filter by exam
  * @query   section (optional) - filter by section
  */
@@ -87,6 +87,6 @@ const getAllResults = async (req, res) => {
 };
 
 // Route mapping
-router.get('/', getAllResults);
+router.get('/', authorize('admin', 'employer'), getAllResults);
 
 export default router;

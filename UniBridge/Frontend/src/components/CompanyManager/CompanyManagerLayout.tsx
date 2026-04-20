@@ -23,6 +23,7 @@ import {
   User,
   Shield,
   BookOpen,
+  FileText,
 } from "lucide-react";
 import { useState, useEffect, ReactNode } from "react";
 import { toast } from "sonner";
@@ -56,6 +57,11 @@ const sidebarItems = [
     label: "Exam Schedule",
     href: "/company/exam",
     icon: BookOpen,
+  },
+  {
+    label: "View Results",
+    href: "/company/results",
+    icon: FileText,
   },
   {
     label: "Profile Settings",
