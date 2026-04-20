@@ -359,6 +359,97 @@ class ExamService {
     }
   }
 
+  // ==================== NEW RESULTS ENDPOINTS (from Result model) ====================
+
+  // Get all results
+  async getAllNewResults(examId, studentId) {
+    try {
+      let url = '/api/results';
+      const params = new URLSearchParams();
+      if (examId) params.append('examId', examId);
+      if (studentId) params.append('studentId', studentId);
+      if (params.toString()) url += `?${params.toString()}`;
+
+      const response = await axios.get(url, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching results:', error);
+      throw error.response?.data || { success: false, message: 'Failed to fetch results' };
+    }
+  }
+
+  // Get results statistics (new)
+  async getNewResultsStatistics() {
+    try {
+      const response = await axios.get('/api/results/stats/summary', this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching results statistics:', error);
+      throw error.response?.data || { success: false, message: 'Failed to fetch statistics' };
+    }
+  }
+
+  // Get results by exam (new)
+  async getNewResultsByExam(examId) {
+    try {
+      const response = await axios.get(`/api/results/exam/${examId}`, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching results by exam:', error);
+      throw error.response?.data || { success: false, message: 'Failed to fetch exam results' };
+    }
+  }
+
+  // Get exam results statistics (from exam_results collection)
+  async getExamResultsStatistics() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/admin/exam-results/stats`, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching exam results statistics:', error);
+      throw error.response?.data || { success: false, message: 'Failed to fetch statistics' };
+    }
+  }
+
+  // Get all exam results (from exam_results collection)
+  async getAllExamResults(examName, studentEmail) {
+    try {
+      let url = `${API_BASE_URL}/admin/exam-results`;
+      const params = new URLSearchParams();
+      if (examName) params.append('examName', examName);
+      if (studentEmail) params.append('studentEmail', studentEmail);
+      if (params.toString()) url += `?${params.toString()}`;
+
+      const response = await axios.get(url, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching exam results:', error);
+      throw error.response?.data || { success: false, message: 'Failed to fetch exam results' };
+    }
+  }
+
+  // Get exam results by exam name (from exam_results collection)
+  async getExamResultsByExam(examName) {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/admin/exam-results/exam/${encodeURIComponent(examName)}`, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching exam results by exam:', error);
+      throw error.response?.data || { success: false, message: 'Failed to fetch exam results' };
+    }
+  }
+
+  // Get single result (new)
+  async getNewResultById(resultId) {
+    try {
+      const response = await axios.get(`/api/results/${resultId}`, this.getAuthHeaders());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching result:', error);
+      throw error.response?.data || { success: false, message: 'Failed to fetch result' };
+    }
+  }
+
 }
 
 export default new ExamService();

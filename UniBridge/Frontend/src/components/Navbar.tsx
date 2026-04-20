@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import NotificationBell from "@/components/NotificationBell";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -131,6 +132,7 @@ const Navbar = () => {
               {role === "student" && (
                 <>
                   <NotificationBell />
+                  <ThemeToggle />
                   <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="flex items-center gap-2">
@@ -160,6 +162,7 @@ const Navbar = () => {
               {role === "admin" && (
                 <div className="flex items-center gap-2">
                   <NotificationBell />
+                  <ThemeToggle />
                   <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>Admin Panel</Button>
                   <Button variant="ghost" size="sm" onClick={handleSignOut}>
                     <div className="relative w-8 h-8 rounded-full bg-primary flex items-center justify-center">
@@ -172,9 +175,10 @@ const Navbar = () => {
               )}
 
               {/* Company Panel Link for Employers */}
-              {role === "employer" && (
+              {role === "employer" && user?.isApproved && (
                 <div className="flex items-center gap-2">
                   <NotificationBell />
+                  <ThemeToggle />
                   <Button variant="outline" size="sm" onClick={() => navigate("/company/dashboard")}>Company Panel</Button>
                   <Button variant="ghost" size="sm" onClick={handleSignOut}>
                     <div className="relative w-8 h-8 rounded-full bg-primary flex items-center justify-center">
@@ -199,6 +203,7 @@ const Navbar = () => {
             </>
           ) : (
             <>
+              <ThemeToggle />
               <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
                 Sign In
               </Button>

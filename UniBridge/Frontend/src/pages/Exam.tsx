@@ -26,7 +26,7 @@ interface ExamData {
 const Exam = () => {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
-  
+
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
   const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes default
@@ -42,7 +42,7 @@ const Exam = () => {
   const isRunningInSEB = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const isLockdownMode = urlParams.get('lockdown') === 'true';
-    
+
     // Check for SEB-specific indicators
     const sebIndicators = [
       navigator.userAgent.includes('SEB'),
@@ -50,7 +50,7 @@ const Exam = () => {
       window.location.hostname.includes('seb'),
       isLockdownMode
     ];
-    
+
     return sebIndicators.some(indicator => indicator);
   };
 
@@ -73,11 +73,11 @@ const Exam = () => {
       try {
         setLoading(true);
         console.log("Fetching public exam data for examId:", examId);
-        
+
         // Fetch exam details
         const examResponse = await examService.getPublicExamById(examId);
         console.log("Exam response:", examResponse);
-        
+
         if (!examResponse.success) {
           console.log("Exam fetch failed:", examResponse);
           toast.error("Failed to load exam details");
@@ -89,7 +89,7 @@ const Exam = () => {
         console.log("Exam data:", exam);
         setExamData(exam);
         setTimeLeft(exam.timeLimit * 60); // Convert minutes to seconds
-        
+
         // Leave question loading until exam start
         console.log("Exam data loaded; waiting for Start Exam.", exam);
       } catch (error) {
@@ -118,7 +118,7 @@ const Exam = () => {
         // Prevent Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A, F12, etc.
         if (e.ctrlKey || e.altKey || e.metaKey) {
           if (['c', 'v', 'x', 'a', 's', 'p', 'u', 'i', 'j', 'w', 't', 'n', 'r', 'f', 'h', 'g', 'o', 'l', 'q', 'z'].includes(e.key.toLowerCase()) ||
-              e.key === 'F12' || e.key === 'F11' || e.key.startsWith('F')) {
+            e.key === 'F12' || e.key === 'F11' || e.key.startsWith('F')) {
             e.preventDefault();
             toast.warning("Keyboard shortcuts are disabled during the exam");
             return false;
@@ -250,35 +250,35 @@ const Exam = () => {
 
   const submitResults = async (startTime: number) => {
     if (!examId || !examData) return;
-    
+
     try {
       setSubmitting(true);
-      
+
       // Calculate duration in minutes
       const duration = Math.round((Date.now() - startTime) / 60000);
-      
+
       // Prepare answers array in the correct order
-      const answersArray = questions.map(question => 
+      const answersArray = questions.map(question =>
         selectedAnswers[question._id] !== undefined ? selectedAnswers[question._id] : -1
       );
-      
+
       // Get user email - you can modify this to get from auth context or prompt user
       const userEmail = localStorage.getItem('userEmail') || prompt('Please enter your email:') || 'student@example.com';
-      
+
       const resultData = {
         applicantEmail: userEmail,
         answers: answersArray,
         duration: duration
       };
-      
+
       console.log("Submitting results:", resultData);
-      
+
       const response = await examService.submitExamResults(examId, resultData);
-      
+
       if (response.success) {
         console.log("Results submitted successfully:", response.data);
         toast.success("Exam results submitted successfully!");
-        
+
         // Store user email for future use
         localStorage.setItem('userEmail', userEmail);
       } else {
@@ -343,7 +343,7 @@ const Exam = () => {
               {examData.description}
             </p>
           </div>
-          
+
           <div className="space-y-4 mb-8">
             <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
               <AlertCircle className="w-5 h-5 text-primary" />
@@ -358,7 +358,7 @@ const Exam = () => {
               <span className="text-foreground">Pass mark: {examData.passingScore}%</span>
             </div>
           </div>
-          
+
           <button
             onClick={startExam}
             disabled={startingExam}
@@ -376,7 +376,7 @@ const Exam = () => {
     const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
     const passed = percentage >= (examData?.passingScore || 70);
     const inSEB = isRunningInSEB();
-    
+
     return (
       <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
         <div className="bg-card rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-xl text-center">
@@ -390,12 +390,12 @@ const Exam = () => {
               {passed ? "Congratulations!" : "Exam Completed"}
             </h2>
             <p className="text-muted-foreground">
-              {passed 
-                ? `You've completed the ${examData?.title} exam.` 
+              {passed
+                ? `You've completed the ${examData?.title} exam.`
                 : "Your answers have been submitted successfully."}
             </p>
           </div>
-          
+
           <div className="bg-muted/50 rounded-xl p-6 mb-6">
             <div className="text-4xl font-bold text-foreground mb-2">
               {score}/{questions.length}
@@ -407,7 +407,7 @@ const Exam = () => {
               {passed ? "PASSED" : "COMPLETED"}
             </div>
           </div>
-          
+
           <div className="space-y-3 text-left max-w-lg mx-auto">
             <h3 className="font-semibold text-foreground mb-3">Next steps</h3>
             <p className="text-muted-foreground">
@@ -464,24 +464,23 @@ const Exam = () => {
             <h2 className="text-xl font-semibold text-foreground mb-6">
               {questions[currentQuestion]?.text}
             </h2>
-            
+
             <div className="space-y-4 mb-8">
               {questions[currentQuestion]?.options.map((option, index) => (
                 <button
                   key={index}
                   onClick={() => handleAnswerSelect(questions[currentQuestion]._id, index)}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                    selectedAnswers[questions[currentQuestion]?._id] === index
+                  className={`w-full text-left p-4 rounded-lg border-2 transition-all ${selectedAnswers[questions[currentQuestion]?._id] === index
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                  }`}
+                    }`}
                 >
                   <span className="font-medium">{String.fromCharCode(65 + index)}. </span>
                   {option}
                 </button>
               ))}
             </div>
-            
+
             <div className="flex justify-between">
               <button
                 onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}
@@ -490,7 +489,7 @@ const Exam = () => {
               >
                 Previous
               </button>
-              
+
               {currentQuestion === questions.length - 1 ? (
                 <button
                   onClick={() => {

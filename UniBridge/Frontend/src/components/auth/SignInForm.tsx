@@ -145,6 +145,7 @@ const SignInForm = () => {
           </div>
           <div className="text-center">
             <Button 
+              type="button"
               variant="ghost" 
               className="p-0 h-auto text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
               onClick={() => setShowResetDialog(true)}

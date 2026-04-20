@@ -28,6 +28,9 @@ import PasswordResetDialog from "@/components/auth/PasswordResetDialog";
 import EmailVerificationBanner from "@/components/auth/EmailVerificationBanner";
 import OTPVerificationDialog from "@/components/auth/OTPVerificationDialog";
 import AuthService from "@/services/authService";
+import twoFactorService from "@/services/twoFactorService";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   validateEmail,
   validatePassword,
@@ -43,6 +46,10 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [pending2FAUserId, setPending2FAUserId] = useState("");
+  const [twoFACode, setTwoFACode] = useState("");
+  const [verifying2FA, setVerifying2FA] = useState(false);
   const navigate = useNavigate();
   const { user, isAuthenticated, login, register, setUser } = useAuth();
   const [formData, setFormData] = useState({
@@ -63,7 +70,12 @@ const Auth = () => {
     { icon: Star, text: "Personalized recommendations" },
   ];
 
-  if (isAuthenticated && user) return <Navigate to="/" replace />;
+  if (isAuthenticated && user) {
+    if (user.role === 'employer' && !user.isApproved) {
+      return <Navigate to="/pending-approval" replace />;
+    }
+    return <Navigate to="/" replace />;
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -200,19 +212,38 @@ const Auth = () => {
           setPendingUserEmail(formData.email);
           setShowOTPDialog(true);
         } else {
-          // For login, redirect to home page
-          toast({
-            title: "Success",
-            description: "Signed in successfully!"
-          });
-          navigate("/");
+          // For login, check if 2FA is required
+          console.log('Login response:', response); // Debug log
+          if (response.requires2FA) {
+            console.log('2FA required, showing dialog'); // Debug log
+            setPending2FAUserId(response.userId);
+            setTwoFACode("");
+            setShow2FADialog(true);
+          } else {
+            // Normal login without 2FA
+            console.log('No 2FA required, redirecting'); // Debug log
+            toast({
+              title: "Success",
+              description: "Signed in successfully!"
+            });
+            navigate("/");
+          }
         }
       } else {
-        toast({
-          title: "Error",
-          description: response.error || "Authentication failed",
-          variant: "destructive"
-        });
+        // Check if error is about pending approval
+        if (response.error && response.error.includes('pending admin approval')) {
+          toast({
+            title: "Account Pending Approval",
+            description: "Your employer account is still under review. Please wait for admin approval.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: response.error || "Authentication failed",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error: any) {
       toast({
@@ -222,6 +253,61 @@ const Auth = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handle2FAVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!twoFACode || twoFACode.length !== 6) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid 6-digit code",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setVerifying2FA(true);
+    
+    try {
+      const response = await twoFactorService.verify2FALogin(twoFACode, pending2FAUserId);
+      
+      if (response.success) {
+        // Store tokens
+        localStorage.setItem('token', response.data.token);
+        if (response.data.refreshToken) {
+          localStorage.setItem('refreshToken', response.data.refreshToken);
+        }
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        // Update auth context
+        setUser(response.data.user);
+        
+        toast({
+          title: "Success",
+          description: "2FA verified! Signed in successfully."
+        });
+        
+        setShow2FADialog(false);
+        setTwoFACode("");
+        setPending2FAUserId("");
+        navigate("/");
+      } else {
+        toast({
+          title: "Error",
+          description: response.error || "Invalid 2FA code",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "2FA verification failed",
+        variant: "destructive"
+      });
+    } finally {
+      setVerifying2FA(false);
     }
   };
 
@@ -520,7 +606,7 @@ const Auth = () => {
                       <Building className="w-4 h-4 text-primary" />
                       I am a
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setFormData({...formData, role: "student"})}
@@ -547,20 +633,10 @@ const Auth = () => {
                         <div className="font-medium">Employer</div>
                         <div className="text-xs text-muted-foreground mt-1">Posting opportunities</div>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData({...formData, role: "admin"})}
-                        className={`p-4 rounded-xl border-2 transition-all ${
-                          formData.role === "admin"
-                            ? "border-purple-500 bg-purple-500/10 text-purple-600"
-                            : "border-border hover:border-purple-500/50 bg-background/50"
-                        }`}
-                      >
-                        <Shield className="w-6 h-6 mx-auto mb-2" />
-                        <div className="font-medium">Admin</div>
-                        <div className="text-xs text-muted-foreground mt-1">Platform management</div>
-                      </button>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {formData.role === "employer" && "⚠️ Employer accounts require admin approval before accessing the platform."}
+                    </p>
                   </div>
                   
                   {/* Terms and Conditions Checkbox */}
@@ -795,14 +871,75 @@ const Auth = () => {
             const userData = AuthService.getCurrentUserFromStorage();
             if (userData) {
               setUser(userData);
+              
+              // Check if user is employer pending approval
+              if (userData.role === 'employer' && !userData.isApproved) {
+                toast({
+                  title: "Registration Successful",
+                  description: "Your account has been created! Redirecting to approval status..."
+                });
+                navigate("/pending-approval");
+              } else {
+                toast({
+                  title: "Success",
+                  description: "Account verified successfully! You can now access all features."
+                });
+                navigate("/");
+              }
             }
-            toast({
-              title: "Success",
-              description: "Account verified successfully! You can now access all features."
-            });
-            navigate("/");
           }}
         />
+
+        {/* 2FA Verification Dialog */}
+        <Dialog open={show2FADialog} onOpenChange={setShow2FADialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Two-Factor Authentication
+              </DialogTitle>
+              <DialogDescription>
+                Enter the 6-digit code from your authenticator app
+              </DialogDescription>
+            </DialogHeader>
+            
+            <form onSubmit={handle2FAVerification} className="space-y-6 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="twoFACode">Verification Code</Label>
+                <Input
+                  id="twoFACode"
+                  placeholder="000000"
+                  value={twoFACode}
+                  onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  maxLength={6}
+                  className="text-center text-3xl tracking-widest font-mono h-16"
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Open your authenticator app to get the code
+                </p>
+              </div>
+
+              <Button 
+                type="submit"
+                className="w-full" 
+                disabled={verifying2FA || twoFACode.length !== 6}
+              >
+                {verifying2FA ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Verify & Sign In
+                  </>
+                )}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </div>
   );
