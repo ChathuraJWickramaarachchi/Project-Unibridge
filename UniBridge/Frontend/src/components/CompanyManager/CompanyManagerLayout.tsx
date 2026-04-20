@@ -74,8 +74,10 @@ const CompanyManagerLayout = ({ children }: CompanyManagerLayoutProps) => {
     if (role !== "employer" && role !== "admin") {
       toast.error("Access denied. Company Manager only.");
       navigate("/");
+    } else if (role === "employer" && !user?.isApproved) {
+      navigate("/pending-approval");
     }
-  }, [role, navigate]);
+  }, [role, user, navigate]);
 
   const handleSignOut = () => {
     logout();

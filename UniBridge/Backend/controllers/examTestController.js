@@ -1,6 +1,9 @@
 import zlib from 'zlib';
 import ExamTest from '../models/ExamTest.js';
 import Question from '../models/Question.js';
+import ExamResult from '../models/ExamResult.js';
+import User from '../models/User.js';
+import ApplicantExam from '../models/ApplicantExam.js';
 
 // @desc    Create a new exam
 // @route   POST /api/admin/exams
@@ -39,7 +42,7 @@ const createExam = async (req, res) => {
   }
 };
 
-import ApplicantExam from '../models/ApplicantExam.js';
+// ApplicantExam imported at top
 
 // @desc    Submit exam results (public)
 // @route   POST /api/exams/public/:id/submit
@@ -67,7 +70,7 @@ const submitExamResults = async (req, res) => {
 
     // Get all questions for this exam
     const questions = await Question.find({ examId });
-    
+
     // Calculate results
     let totalScore = 0;
     let totalMarks = 0;
@@ -77,10 +80,10 @@ const submitExamResults = async (req, res) => {
       const userAnswer = answers[index] !== undefined ? answers[index] : -1;
       const isCorrect = userAnswer === question.correctAnswer;
       const marksObtained = isCorrect ? question.marks : 0;
-      
+
       totalScore += marksObtained;
       totalMarks += question.marks;
-      
+
       processedAnswers.push({
         questionId: question._id,
         selectedAnswer: userAnswer,
@@ -107,6 +110,35 @@ const submitExamResults = async (req, res) => {
       },
       { upsert: true, new: true }
     );
+
+    // EXTENSION: Save to exam_results collection
+    try {
+      const user = await User.findOne({ email: applicantEmail });
+      const studentName = user ? `${user.firstName} ${user.lastName}` : applicantEmail.split('@')[0];
+      const section = user?.profile?.major || 'General';
+
+      await ExamResult.findOneAndUpdate(
+        { studentEmail: applicantEmail, examName: exam.title },
+        {
+          studentName,
+          studentEmail: applicantEmail,
+          examId: exam._id,
+          examName: exam.title,
+          score: totalScore,
+          percentage,
+          result: passFail.toUpperCase(),
+          status: passFail.toUpperCase(),
+          section: section,
+          correctAnswers: processedAnswers.filter(a => a.isCorrect).length,
+          totalQuestions: questions.length,
+          duration: duration || 0,
+          submittedAt: new Date()
+        },
+        { upsert: true, new: true }
+      );
+    } catch (saveError) {
+      console.error('Error saving to exam_results:', saveError);
+    }
 
     res.status(200).json({
       success: true,
@@ -212,17 +244,17 @@ const getResultsByExam = async (req, res) => {
 const getResultsStatistics = async (req, res) => {
   try {
     const results = await ApplicantExam.find({ status: 'evaluated' });
-    
+
     const totalAttempts = results.length;
     const passedAttempts = results.filter(r => r.passFail === 'pass').length;
     const failedAttempts = totalAttempts - passedAttempts;
-    
+
     const passPercentage = totalAttempts > 0 ? Math.round((passedAttempts / totalAttempts) * 100) : 0;
-    
+
     const scores = results.map(r => r.percentage);
     const averageScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
     const averagePercentage = averageScore;
-    
+
     const maxScore = scores.length > 0 ? Math.max(...scores) : 0;
     const minScore = scores.length > 0 ? Math.min(...scores) : 0;
 
@@ -256,7 +288,7 @@ const getAllPublicExams = async (req, res) => {
     const exams = await ExamTest.find({ status: 'active' })
       .sort({ createdAt: -1 })
       .select('-__v');
-    
+
     res.status(200).json({
       success: true,
       count: exams.length,
@@ -280,7 +312,7 @@ const getAllPublicExams = async (req, res) => {
 const getPublicExamById = async (req, res) => {
   try {
     const exam = await ExamTest.findById(req.params.id);
-    
+
     if (!exam) {
       return res.status(404).json({
         success: false,
@@ -294,7 +326,7 @@ const getPublicExamById = async (req, res) => {
         message: 'Exam not available'
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: exam
@@ -314,7 +346,7 @@ const getPublicExamById = async (req, res) => {
 const getPublicQuestionsByExam = async (req, res) => {
   try {
     const exam = await ExamTest.findById(req.params.id);
-    
+
     if (!exam) {
       return res.status(404).json({
         success: false,
@@ -332,7 +364,7 @@ const getPublicQuestionsByExam = async (req, res) => {
     const questions = await Question.find({ examId: req.params.id })
       .sort({ createdAt: 1 })
       .select('-__v');
-    
+
     res.status(200).json({
       success: true,
       data: questions
@@ -354,7 +386,7 @@ const getPublicQuestionsByExam = async (req, res) => {
 const getSecureExamById = async (req, res) => {
   try {
     const exam = await ExamTest.findById(req.params.id);
-    
+
     if (!exam) {
       return res.status(404).json({
         success: false,
@@ -370,7 +402,7 @@ const getSecureExamById = async (req, res) => {
     }
 
     const questionCount = await Question.countDocuments({ examId: exam._id });
-    
+
     res.status(200).json({
       success: true,
       data: {
@@ -393,7 +425,7 @@ const getSecureExamById = async (req, res) => {
 const getSecureQuestionsByExam = async (req, res) => {
   try {
     const exam = await ExamTest.findById(req.params.id);
-    
+
     if (!exam) {
       return res.status(404).json({
         success: false,
@@ -411,7 +443,7 @@ const getSecureQuestionsByExam = async (req, res) => {
     const questions = await Question.find({ examId: req.params.id })
       .sort({ createdAt: 1 })
       .select('-__v');
-    
+
     res.status(200).json({
       success: true,
       data: questions
@@ -453,7 +485,7 @@ const secureSubmitExamResults = async (req, res) => {
 
     // Get all questions for this exam
     const questions = await Question.find({ examId });
-    
+
     // Calculate results
     let totalScore = 0;
     let totalMarks = 0;
@@ -463,10 +495,10 @@ const secureSubmitExamResults = async (req, res) => {
       const userAnswer = answers[index] !== undefined ? answers[index] : -1;
       const isCorrect = userAnswer === question.correctAnswer;
       const marksObtained = isCorrect ? question.marks : 0;
-      
+
       totalScore += marksObtained;
       totalMarks += question.marks;
-      
+
       processedAnswers.push({
         questionId: question._id,
         selectedAnswer: userAnswer,
@@ -493,6 +525,35 @@ const secureSubmitExamResults = async (req, res) => {
       },
       { upsert: true, new: true }
     );
+
+    // EXTENSION: Save to exam_results collection
+    try {
+      // For secure exam, we already have the user in req.user
+      const studentName = `${req.user.firstName} ${req.user.lastName}`;
+      const section = req.user.profile?.major || 'General';
+
+      await ExamResult.findOneAndUpdate(
+        { studentEmail: applicantEmail, examName: exam.title },
+        {
+          studentName,
+          studentEmail: applicantEmail,
+          examId: exam._id,
+          examName: exam.title,
+          score: totalScore,
+          percentage,
+          result: passFail.toUpperCase(),
+          status: passFail.toUpperCase(),
+          section: section,
+          correctAnswers: processedAnswers.filter(a => a.isCorrect).length,
+          totalQuestions: questions.length,
+          duration: duration || 0,
+          submittedAt: new Date()
+        },
+        { upsert: true, new: true }
+      );
+    } catch (saveError) {
+      console.error('Error saving to exam_results (secure):', saveError);
+    }
 
     res.status(200).json({
       success: true,
@@ -583,25 +644,28 @@ const getExamById = async (req, res) => {
 // @access  Private/Admin
 const updateExam = async (req, res) => {
   try {
-    const { title, description, timeLimit, passingScore, status } = req.body;
+    const { id } = req.params;
+    const updateData = req.body;
 
-    let exam = await ExamTest.findById(req.params.id);
+    console.log(`[BACKEND] PUT /api/admin/exams/${id} - Request Received`);
+    console.log('[BACKEND] Request Body:', updateData);
+
+    // Ensure we are using findByIdAndUpdate as requested
+    const exam = await ExamTest.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
 
     if (!exam) {
+      console.log(`[BACKEND] Exam with ID ${id} not found`);
       return res.status(404).json({
         success: false,
         message: 'Exam not found'
       });
     }
 
-    // Update fields
-    if (title) exam.title = title;
-    if (description) exam.description = description;
-    if (timeLimit) exam.timeLimit = timeLimit;
-    if (passingScore !== undefined) exam.passingScore = passingScore;
-    if (status) exam.status = status;
-
-    exam = await exam.save();
+    console.log('[BACKEND] Exam updated successfully:', exam._id);
 
     res.status(200).json({
       success: true,
@@ -609,6 +673,7 @@ const updateExam = async (req, res) => {
       data: exam
     });
   } catch (error) {
+    console.error('[BACKEND] Error updating exam:', error.message);
     res.status(500).json({
       success: false,
       message: 'Error updating exam',
@@ -733,8 +798,7 @@ const generateSEBConfig = async (req, res) => {
 
     // Generate plist XML content for .seb file
     const sebPlist = generateSEBPlist(sebConfig);
-    const gzippedSeb = zlib.gzipSync(Buffer.from(sebPlist, 'utf8'));
-    const sebBuffer = Buffer.concat([Buffer.from('plnd'), gzippedSeb]);
+    const sebBuffer = zlib.gzipSync(Buffer.from(sebPlist, 'utf8'));
 
     // Set headers for file download
     res.setHeader('Content-Type', 'application/octet-stream');

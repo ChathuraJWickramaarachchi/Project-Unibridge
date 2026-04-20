@@ -30,7 +30,7 @@ async function testPaymentValidation() {
     // Create a mock request object
     const mockReq = {
       body: testPaymentData,
-      user: { id: 'test-user-id' }
+      user: { _id: '507f1f77bcf86d766f39ac12' } // Valid 24-character hex string
     };
 
     // Create a mock response object

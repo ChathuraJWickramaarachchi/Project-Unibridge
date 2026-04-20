@@ -1,0 +1,105 @@
+const { jsPDF } = require('jspdf');
+const fs = require('fs');
+
+// Create CV PDF based on the provided image information
+const doc = new jsPDF({
+  orientation: 'portrait',
+  unit: 'mm',
+  format: 'a4'
+});
+
+// PDF dimensions
+const pageWidth = doc.internal.pageSize.getWidth();
+const pageHeight = doc.internal.pageSize.getHeight();
+const margin = 20;
+let currentY = margin;
+
+// Helper function to add text with automatic line breaks
+const addText = (text, fontSize = 12, fontStyle = 'normal', align = 'left') => {
+  doc.setFontSize(fontSize);
+  doc.setFont('helvetica', fontStyle);
+  
+  const lines = doc.splitTextToSize(text, pageWidth - (margin * 2));
+  const lineHeight = fontSize * 0.35;
+  
+  lines.forEach(line => {
+    if (currentY + lineHeight > pageHeight - margin) {
+      doc.addPage();
+      currentY = margin;
+    }
+    
+    if (align === 'center') {
+      doc.text(line, pageWidth / 2, currentY, { align: 'center' });
+    } else {
+      doc.text(line, margin, currentY);
+    }
+    
+    currentY += lineHeight;
+  });
+  
+  return currentY;
+};
+
+// CV Header
+addText('CURRICULUM VITAE', 20, 'bold', 'center');
+currentY += 15;
+
+// Personal Information Section
+addText('PERSONAL INFORMATION', 14, 'bold');
+currentY += 8;
+
+addText(`Name: tumalka`);
+addText(`Email: charukakavindu280@gmail.com`);
+addText(`Phone: 0776095448`);
+addText(`Location: rwdtdsf`);
+addText(`LinkedIn: linkedin.com/in/kavicharu`);
+currentY += 10;
+
+// Career Objective
+addText('CAREER OBJECTIVE', 14, 'bold');
+currentY += 5;
+addText('fdsfsdfsfsdftratasrtydraytdsdasyudstuy');
+currentY += 10;
+
+// Skills Section
+addText('SKILLS', 14, 'bold');
+currentY += 5;
+addText('sdasfsdf, dfsdf, sdfsdf, sd');
+currentY += 10;
+
+// Languages Section
+addText('LANGUAGES', 14, 'bold');
+currentY += 5;
+addText('english');
+currentY += 10;
+
+// Certifications Section
+addText('CERTIFICATIONS', 14, 'bold');
+currentY += 5;
+addText('dafdaghs');
+currentY += 10;
+
+// Experience Section
+addText('EXPERIENCE', 14, 'bold');
+currentY += 5;
+addText('tsytasfdy');
+currentY += 10;
+
+// Education Section
+addText('EDUCATION', 14, 'bold');
+currentY += 5;
+addText('dsafdasdfsdfsdf');
+currentY += 15;
+
+// Footer
+addText(`Generated on: ${new Date().toLocaleDateString()}`, 10, 'italic');
+addText('Professional CV - Created with UniBridge Platform', 10, 'italic');
+
+// Generate PDF
+const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+
+// Save the PDF
+fs.writeFileSync('tumalka_cv.pdf', pdfBuffer);
+
+console.log('CV PDF created successfully: tumalka_cv.pdf');
+console.log('File size:', pdfBuffer.length, 'bytes');

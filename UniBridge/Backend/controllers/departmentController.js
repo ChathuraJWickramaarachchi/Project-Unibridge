@@ -1,6 +1,6 @@
-const Department = require('../models/Department');
-const Job = require('../models/Job');
-const mongoose = require('mongoose');
+import Department from '../models/Department.js';
+import Job from '../models/Job.js';
+import mongoose from 'mongoose';
 
 const departmentIcons = {
   'IT': 'Monitor',

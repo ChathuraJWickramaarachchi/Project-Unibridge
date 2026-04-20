@@ -112,7 +112,9 @@ paymentSchema.pre('save', function(next) {
   if (this.isNew && !this.paymentDetails.transactionId) {
     this.paymentDetails.transactionId = 'TXN_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9).toUpperCase();
   }
-  next();
+  if (typeof next === 'function') {
+    next();
+  }
 });
 
 export default mongoose.model('Payment', paymentSchema);

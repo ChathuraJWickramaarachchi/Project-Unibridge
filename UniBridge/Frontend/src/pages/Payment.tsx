@@ -14,16 +14,41 @@ export interface CVFormData {
   email: string;
   phone: string;
   address: string;
+  linkedin: string;
+  careerObjective: string;
   education: string;
   skills: string;
   experience: string;
-  careerObjective: string;
+  certifications: string;
+  languages: string;
 }
 
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const cvData: CVFormData = location.state?.cvData;
+
+  // Check if user is authenticated
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Authentication Required</CardTitle>
+            <CardDescription>
+              Please log in to access the payment page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => navigate("/login")} className="w-full">
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("card");
@@ -60,6 +85,22 @@ const Payment = () => {
         toast.error("Please fill in all card details");
         return;
       }
+      
+      // Basic card validation
+      if (cardNumber.replace(/\s/g, '').length < 13 || cardNumber.replace(/\s/g, '').length > 19) {
+        toast.error("Please enter a valid card number");
+        return;
+      }
+      
+      if (!/^\d{2}\/\d{2}$/.test(expiryDate)) {
+        toast.error("Please enter expiry date in MM/YY format");
+        return;
+      }
+      
+      if (!/^\d{3,4}$/.test(cvv)) {
+        toast.error("Please enter a valid CVV");
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -89,15 +130,62 @@ const Payment = () => {
           try {
             const downloadResponse = await paymentService.downloadCV(paymentId);
             
-            // Create download link
-            const url = window.URL.createObjectURL(new Blob([downloadResponse.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${cvData.fullName.replace(/\s+/g, '_')}_CV.txt`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
+            // Create download link for PDF file - rebuilt from scratch
+            try {
+              // Verify we received blob data
+              if (!downloadResponse.data) {
+                throw new Error('No data received from server');
+              }
+              
+              // Create blob with correct MIME type based on response
+              const contentType = downloadResponse.headers && downloadResponse.headers['content-type'] 
+                                   ? downloadResponse.headers['content-type'] 
+                                   : 'application/pdf';
+              
+              const isPdf = contentType.includes('application/pdf');
+              
+              const blob = new Blob([downloadResponse.data], { 
+                type: contentType 
+              });
+              
+              // Verify blob was created successfully
+              if (blob.size === 0) {
+                throw new Error('Empty blob created');
+              }
+              
+              // Create download URL
+              const url = window.URL.createObjectURL(blob);
+              
+              // Create download link element
+              const link = document.createElement('a');
+              link.style.display = 'none';
+              link.href = url;
+              
+              // Set filename with proper sanitization and correct extension
+              const sanitizedName = cvData.fullName
+                .replace(/[^a-zA-Z0-9\s]/g, '')
+                .replace(/\s+/g, '_')
+                .toLowerCase();
+              
+              const extension = isPdf ? 'pdf' : 'txt';
+              link.download = `${sanitizedName}_CV.${extension}`;
+              
+              // Trigger download
+              document.body.appendChild(link);
+              link.click();
+              
+              // Clean up after download
+              setTimeout(() => {
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+              }, 100);
+              
+              console.log(`PDF download initiated: ${link.download} (${blob.size} bytes)`);
+              
+            } catch (blobError) {
+              console.error('Error creating download blob:', blobError);
+              throw new Error('Failed to process PDF download');
+            }
             
             toast.success("CV downloaded successfully!");
             
@@ -115,7 +203,8 @@ const Payment = () => {
       }
     } catch (error: any) {
       console.error('Payment error:', error);
-      toast.error(error.message || "Payment failed. Please try again.");
+      const errorMessage = error?.message || error?.details?.message || "Failed to process payment";
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }

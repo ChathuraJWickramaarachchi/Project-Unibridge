@@ -8,6 +8,11 @@ import {
   verifyUser,
 } from '../controllers/adminController.js';
 import {
+  getPendingEmployers,
+  approveEmployer,
+  rejectEmployer,
+} from '../controllers/adminEmployerController.js';
+import {
   createExam,
   getAllExams,
   getExamById,
@@ -28,6 +33,11 @@ import {
   getResultDetails,
   getResultsStatistics
 } from '../controllers/resultsController.js';
+import {
+  getExamResultsStatistics,
+  getAllExamResults,
+  getExamResultsByExam
+} from '../controllers/examResultsController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -46,6 +56,11 @@ router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
 router.put('/users/:id/verify', verifyUser);
 
+// Employer approval management
+router.get('/employers/pending', getPendingEmployers);
+router.put('/employers/:id/approve', approveEmployer);
+router.put('/employers/:id/reject', rejectEmployer);
+
 // Exam Management
 router.post('/exams', createExam);
 router.get('/exams', getAllExams);
@@ -61,10 +76,9 @@ router.get('/questions/single/:id', getQuestionById);
 router.put('/questions/:id', updateQuestion);
 router.delete('/questions/:id', deleteQuestion);
 
-// Results Management
-router.get('/results/stats/summary', getResultsStatistics);
-router.get('/results/:examId/:email', getResultDetails);
-router.get('/results/:examId', getResultsByExam);
-router.get('/results', getAllResults);
+// Exam Results Management (from exam_results collection)
+router.get('/exam-results/stats', getExamResultsStatistics);
+router.get('/exam-results/exam/:examName', getExamResultsByExam);
+router.get('/exam-results', getAllExamResults);
 
 export default router;
