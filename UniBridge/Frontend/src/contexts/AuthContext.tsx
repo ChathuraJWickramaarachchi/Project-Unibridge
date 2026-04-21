@@ -10,6 +10,8 @@ interface User {
   email: string;
   role: AppRole;
   isVerified: boolean;
+  isApproved?: boolean;
+  authProvider?: 'local' | 'google';
   phone?: string;
   address?: string;
   profile?: {

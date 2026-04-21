@@ -61,6 +61,36 @@ const Navbar = () => {
     navigate("/auth");
   };
 
+  // Check if user is a pending employer (not yet approved)
+  const isPendingEmployer = user?.role === 'employer' && user?.isApproved === false;
+
+  // If user is pending employer, show minimal navbar
+  if (isPendingEmployer) {
+    return (
+      <nav className="sticky top-0 z-50 bg-card/90 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto flex items-center justify-between h-16 px-4">
+          <button 
+            onClick={() => navigate("/")} 
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="font-heading font-bold text-lg text-foreground">UniBridge</span>
+          </button>
+
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   return (
     <nav className="sticky top-0 z-50 bg-card/90 backdrop-blur-md border-b border-border">
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
@@ -224,48 +254,53 @@ const Navbar = () => {
 
       {mobileOpen && (
         <div className="md:hidden border-t border-border bg-card px-4 pb-4 animate-fade-in">
-          {links.slice(0, 1).map((link) => (
-            <button
-              key={link.label}
-              onClick={() => handleNavigation(link.href, link.isExternal)}
-              className={`block w-full text-left py-3 text-sm font-medium transition-colors ${
-                isActive(link.href)
-                  ? "text-foreground font-semibold text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {link.label}
-            </button>
-          ))}
-          
-          {/* Show Job and Exam links only when logged in */}
-          {user && protectedLinks.map((link) => (
-            <button
-              key={link.label}
-              onClick={() => navigate(link.href)}
-              className={`block w-full text-left py-3 text-sm font-medium transition-colors ${
-                isActive(link.href)
-                  ? "text-foreground font-semibold text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {link.label}
-            </button>
-          ))}
-          
-          {links.slice(1).map((link) => (
-            <button
-              key={link.label}
-              onClick={() => handleNavigation(link.href, link.isExternal)}
-              className={`block w-full text-left py-3 text-sm font-medium transition-colors ${
-                isActive(link.href)
-                  ? "text-foreground font-semibold text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {link.label}
-            </button>
-          ))}
+          {/* Don't show navigation links for pending employers */}
+          {!isPendingEmployer && (
+            <>
+              {links.slice(0, 1).map((link) => (
+                <button
+                  key={link.label}
+                  onClick={() => handleNavigation(link.href, link.isExternal)}
+                  className={`block w-full text-left py-3 text-sm font-medium transition-colors ${
+                    isActive(link.href)
+                      ? "text-foreground font-semibold text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ))}
+              
+              {/* Show Job and Exam links only when logged in */}
+              {user && protectedLinks.map((link) => (
+                <button
+                  key={link.label}
+                  onClick={() => navigate(link.href)}
+                  className={`block w-full text-left py-3 text-sm font-medium transition-colors ${
+                    isActive(link.href)
+                      ? "text-foreground font-semibold text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ))}
+              
+              {links.slice(1).map((link) => (
+                <button
+                  key={link.label}
+                  onClick={() => handleNavigation(link.href, link.isExternal)}
+                  className={`block w-full text-left py-3 text-sm font-medium transition-colors ${
+                    isActive(link.href)
+                      ? "text-foreground font-semibold text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ))}
+            </>
+          )}
           <div className="flex gap-3 pt-3">
             {user ? (
               <>

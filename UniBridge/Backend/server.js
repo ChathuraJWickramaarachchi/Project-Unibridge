@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import passport from 'passport';
+import { initializeGoogleOAuth } from './config/passport.js';
 import connectDB from './config/db.js';
 import errorHandler from './middleware/errorHandler.js';
 
@@ -16,7 +16,9 @@ dotenv.config();
 
 const app = express();
 
-// Initialize Passport
+// Initialize Passport with Google OAuth strategy
+import passport from 'passport';
+initializeGoogleOAuth();
 app.use(passport.initialize());
 
 // Body parser middleware

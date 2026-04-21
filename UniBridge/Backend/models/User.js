@@ -174,6 +174,7 @@ userSchema.methods.getPublicProfile = function() {
     phone: this.phone,
     address: this.address,
     role: this.role,
+    authProvider: this.authProvider,
     isVerified: this.isVerified,
     isApproved: this.isApproved,
     approvalStatus: this.approvalStatus,

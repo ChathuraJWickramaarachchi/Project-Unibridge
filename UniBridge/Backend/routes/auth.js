@@ -1,6 +1,7 @@
 import express from 'express';
 import { register, login, getMe, changePassword, forgotPassword, resetPassword, verifyOTP, verifyResetOTP } from '../controllers/authController.js';
-import { passport, googleCallback } from '../controllers/googleAuthController.js';
+import { googleCallback } from '../controllers/googleAuthController.js';
+import passport from 'passport';
 import { protect } from '../middleware/auth.js';
 
 console.log('Loading auth routes...');
@@ -18,12 +19,18 @@ router.put('/reset-password/:resettoken', resetPassword);
 router.post('/verify-otp', verifyOTP);
 
 // Google OAuth routes
-router.get('/google', passport.authenticate('google', {
-  scope: ['profile', 'email']
-}));
+router.get('/google', 
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    prompt: 'select_account'
+  })
+);
 
 router.get('/google/callback', 
-  passport.authenticate('google', { session: false, failureRedirect: '/auth?error=google_auth_failed' }),
+  passport.authenticate('google', { 
+    session: false, 
+    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:8080'}/auth?error=google_auth_failed` 
+  }),
   googleCallback
 );
 

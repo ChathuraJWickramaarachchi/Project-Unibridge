@@ -18,6 +18,48 @@ const getProfile = async (req, res, next) => {
   }
 };
 
+// @desc    Update user role (for Google OAuth users)
+// @route   PUT /api/users/update-role
+// @access  Private
+const updateRole = async (req, res, next) => {
+  try {
+    const { role } = req.body;
+
+    if (!role || !['student', 'employer'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid role. Must be "student" or "employer"',
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    user.role = role;
+
+    // If employer, set approval status
+    if (role === 'employer') {
+      user.isApproved = false;
+      user.approvalStatus = 'pending';
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      data: user.getPublicProfile(),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Update user profile
 // @route   PUT /api/users/profile
 // @access  Private
@@ -63,4 +105,5 @@ const updateProfile = async (req, res, next) => {
 export {
   getProfile,
   updateProfile,
+  updateRole,
 };

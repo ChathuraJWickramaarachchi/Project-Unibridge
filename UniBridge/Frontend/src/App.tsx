@@ -23,6 +23,8 @@ import ExamCompleted from "./pages/ExamCompleted";
 import CVBuilder from "./pages/CVBuilder";
 import Payment from "./pages/Payment";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
+import RoleSelection from "./pages/RoleSelection";
 import Profile from "./pages/Profile";
 import PendingApproval from "./pages/PendingApproval";
 import NotFound from "./pages/NotFound";
@@ -110,6 +112,8 @@ const App = () => {
               <Route path="/contact" element={<Layout><ContactUs /></Layout>} />
               <Route path="/feedback" element={<Layout><Feedback /></Layout>} />
               <Route path="/auth" element={<Layout showFooter={false}><Auth /></Layout>} />
+              <Route path="/auth/callback" element={<Layout showFooter={false}><AuthCallback /></Layout>} />
+              <Route path="/role-selection" element={<RoleSelection />} />
               <Route path="/pending-approval" element={<Layout showFooter={false}><PendingApproval /></Layout>} />
               <Route path="/profile" element={<Layout><Profile /></Layout>} />
               <Route path="/profile/:section" element={<Layout><Profile /></Layout>} />

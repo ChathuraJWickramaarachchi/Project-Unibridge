@@ -1,88 +1,19 @@
-import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 
-// Configure Google Strategy only if credentials are available
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  passport.use(
-    new GoogleStrategy(
-      {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: '/api/auth/google/callback',
-      },
-      async (accessToken, refreshToken, profile, done) => {
-        try {
-          // Check if user already exists
-          let user = await User.findOne({ googleId: profile.id });
-
-          if (user) {
-            return done(null, user);
-          }
-
-          // Check if user exists with same email
-          user = await User.findOne({ email: profile.emails[0].value });
-
-          if (user) {
-            // Link Google account to existing user
-            user.googleId = profile.id;
-            user.authProvider = 'google';
-            await user.save();
-            return done(null, user);
-          }
-
-          // Create new user
-          const names = profile.displayName.split(' ');
-          const firstName = names[0] || 'User';
-          const lastName = names.slice(1).join(' ') || '';
-
-          user = await User.create({
-            firstName,
-            lastName,
-            email: profile.emails[0].value,
-            googleId: profile.id,
-            authProvider: 'google',
-            isVerified: true, // Google users are pre-verified
-            phone: '', // Will be filled later
-            address: '', // Will be filled later
-            profile: {
-              avatar: profile.photos[0]?.value || '',
-            },
-          });
-
-          return done(null, user);
-        } catch (error) {
-          return done(error, null);
-        }
-      }
-    )
-  );
-} else {
-  console.warn('⚠️  Google OAuth not configured - GOOGLE_CLIENT_ID and/or GOOGLE_CLIENT_SECRET not set in .env');
-}
-
-// Serialize user for session
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
-
-// Deserialize user from session
-passport.deserializeUser(async (id, done) => {
-  try {
-    const user = await User.findById(id);
-    done(null, user);
-  } catch (error) {
-    done(error, null);
-  }
-});
-
-// @desc    Google Auth Callback
+// @desc    Google Auth Callback Handler
 // @route   GET /api/auth/google/callback
 // @access  Public
-const googleCallback = async (req, res) => {
+export const googleCallback = async (req, res) => {
   try {
     const user = req.user;
+
+    if (!user) {
+      console.error('❌ Google callback: No user found in request');
+      const errorUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/auth?error=google_auth_failed`;
+      return res.redirect(errorUrl);
+    }
+
+    console.log('🎯 Google callback successful for user:', user.email);
 
     // Generate JWT token
     const token = jwt.sign(
@@ -92,11 +23,14 @@ const googleCallback = async (req, res) => {
     );
 
     // Redirect to frontend with token
-    const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${token}`;
+    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:8080';
+    const redirectUrl = `${frontendURL}/auth/callback?token=${token}`;
+    
+    console.log('↩️  Redirecting to:', redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
-    console.error('Google callback error:', error);
-    const errorUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth?error=google_auth_failed`;
+    console.error('❌ Google callback error:', error);
+    const errorUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/auth?error=google_auth_failed`;
     res.redirect(errorUrl);
   }
 };
@@ -104,9 +38,9 @@ const googleCallback = async (req, res) => {
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private
-const getMe = async (req, res) => {
+export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await req.user;
     res.status(200).json({
       success: true,
       data: user.getPublicProfile(),
@@ -117,10 +51,4 @@ const getMe = async (req, res) => {
       error: error.message,
     });
   }
-};
-
-export {
-  passport,
-  googleCallback,
-  getMe,
 };
