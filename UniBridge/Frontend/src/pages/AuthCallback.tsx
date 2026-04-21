@@ -66,7 +66,11 @@ const AuthCallback = () => {
                                      user?.role === 'student' && 
                                      (!user?.phone || user?.phone === '+1-000-000-0000' || user?.phone === 'To be updated');
               
+              // Check if user is a pending employer
+              const isPendingEmployer = user?.role === 'employer' && user?.isApproved === false;
+              
               console.log('AuthCallback - Is new Google user?', isNewGoogleUser);
+              console.log('AuthCallback - Is pending employer?', isPendingEmployer);
               
               if (isNewGoogleUser) {
                 console.log('AuthCallback - New Google user, redirecting to role selection');
@@ -75,6 +79,13 @@ const AuthCallback = () => {
                   description: "Please select your account type to continue.",
                 });
                 navigate("/role-selection");
+              } else if (isPendingEmployer) {
+                console.log('AuthCallback - Pending employer, redirecting to pending approval');
+                toast({
+                  title: "Account Pending",
+                  description: "Your employer account is awaiting admin approval.",
+                });
+                navigate("/pending-approval");
               } else {
                 console.log('AuthCallback - Existing user, redirecting to home');
                 toast({

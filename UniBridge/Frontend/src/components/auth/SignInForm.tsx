@@ -52,7 +52,16 @@ const SignInForm = () => {
           title: "Success",
           description: "Signed in successfully!"
         });
-        navigate("/");
+        
+        // Check if user is a pending employer
+        const user = result.data?.user;
+        const isPendingEmployer = user?.role === 'employer' && user?.isApproved === false;
+        
+        if (isPendingEmployer) {
+          navigate("/pending-approval");
+        } else {
+          navigate("/");
+        }
       } else {
         toast({
           title: "Error",
