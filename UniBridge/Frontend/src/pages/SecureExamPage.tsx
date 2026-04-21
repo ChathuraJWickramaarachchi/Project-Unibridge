@@ -387,9 +387,8 @@ const SecureExamPage = () => {
               {percentage}%
             </div>
             <div
-              className={`text-lg font-medium ${
-                passed ? "text-green-400" : "text-red-400"
-              }`}
+              className={`text-lg font-medium ${passed ? "text-green-400" : "text-red-400"
+                }`}
             >
               {passed ? "PASSED" : "COMPLETED"}
             </div>
@@ -426,21 +425,18 @@ const SecureExamPage = () => {
 
         <div className="flex items-center gap-6">
           <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
-              isTimeWarning
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${isTimeWarning
                 ? "bg-red-500/10 border border-red-500/20"
                 : "bg-slate-700/50"
-            }`}
+              }`}
           >
             <Clock
-              className={`w-4 h-4 ${
-                isTimeWarning ? "text-red-400" : "text-slate-400"
-              }`}
+              className={`w-4 h-4 ${isTimeWarning ? "text-red-400" : "text-slate-400"
+                }`}
             />
             <span
-              className={`font-mono text-sm font-medium ${
-                isTimeWarning ? "text-red-400" : "text-white"
-              }`}
+              className={`font-mono text-sm font-medium ${isTimeWarning ? "text-red-400" : "text-white"
+                }`}
             >
               {formatTime(timeLeft)}
             </span>
@@ -466,13 +462,12 @@ const SecureExamPage = () => {
             <button
               key={q._id}
               onClick={() => setCurrentQuestion(idx)}
-              className={`w-8 h-8 flex-shrink-0 rounded-lg text-xs font-medium transition-all ${
-                idx === currentQuestion
+              className={`w-8 h-8 flex-shrink-0 rounded-lg text-xs font-medium transition-all ${idx === currentQuestion
                   ? "bg-blue-600 text-white"
                   : selectedAnswers[q._id] !== undefined
-                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                  : "bg-slate-700/50 text-slate-400 hover:bg-slate-600/50"
-              }`}
+                    ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                    : "bg-slate-700/50 text-slate-400 hover:bg-slate-600/50"
+                }`}
             >
               {idx + 1}
             </button>
@@ -498,11 +493,10 @@ const SecureExamPage = () => {
                 <button
                   key={index}
                   onClick={() => handleAnswerSelect(question._id, index)}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                    selectedAnswers[question?._id] === index
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all ${selectedAnswers[question?._id] === index
                       ? "border-blue-500 bg-blue-500/10 text-blue-300"
                       : "border-slate-600/50 hover:border-slate-500/50 hover:bg-slate-700/30 text-slate-300"
-                  }`}
+                    }`}
                 >
                   <span className="font-medium text-sm opacity-60 mr-2">
                     {String.fromCharCode(65 + index)}.

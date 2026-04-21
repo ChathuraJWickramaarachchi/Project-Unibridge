@@ -14,18 +14,6 @@ const __dirname = path.dirname(__filename);
 // Load env vars
 dotenv.config();
 
-// Connect to database
-connectDB()
-  .then(() => {
-    console.log('✅ Database initialization complete');
-  })
-  .catch(err => {
-    console.error('❌ Database connection failed, but server will continue for testing');
-    console.error('⚠️  API endpoints requiring database will return errors');
-    console.error('🔧 Fix database connection for full functionality');
-    // Don't exit process - allow server to run for testing
-  });
-
 const app = express();
 
 // Initialize Passport
@@ -68,6 +56,8 @@ import applicationRoutes from './routes/applications.js';
 import notificationRoutes from './routes/notifications.js';
 import examRoutes from './routes/exams.js';
 import paymentRoutes from './routes/payments.js';
+import twoFactorRoutes from './routes/twoFactor.js';
+import resultsRoutes from './routes/results.js';
 
 console.log('Auth routes:', authRoutes);
 app.use('/api/auth', authRoutes);
@@ -80,6 +70,8 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/2fa', twoFactorRoutes);
+app.use('/api/results', resultsRoutes);
 
 // Serve uploaded resumes statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

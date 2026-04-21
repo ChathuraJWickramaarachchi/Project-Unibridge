@@ -1,16 +1,24 @@
 import User from '../models/User.js';
+import { createNotification } from '../utils/notificationHelper.js';
+import { sendVerificationOTPEmail, sendOTPEmail } from '../config/email.js';
 import { generateToken } from '../config/jwt.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-// In production, you would use nodemailer or similar service
-// For now, we'll log the verification link to console
 
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
 const register = async (req, res, next) => {
   try {
-    const { firstName, lastName, email, password, phone, address, role = 'student' } = req.body;
+    const { firstName, lastName, email, password, phone, address, role = 'student', companyInfo } = req.body;
+
+    // Prevent admin registration - only existing admins can create new admins
+    if (role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Admin registration is not allowed. Contact system administrator.',
+      });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -21,6 +29,10 @@ const register = async (req, res, next) => {
       });
     }
 
+    // Determine approval status based on role
+    const isApproved = role === 'student' ? true : false; // Students auto-approved, employers need approval
+    const approvalStatus = role === 'student' ? 'approved' : 'pending';
+
     // Create user (without saving yet)
     const user = new User({
       firstName,
@@ -30,6 +42,9 @@ const register = async (req, res, next) => {
       phone,
       address,
       role,
+      isApproved,
+      approvalStatus,
+      companyInfo: role === 'employer' ? companyInfo : undefined,
     });
 
     // Generate OTP
@@ -38,12 +53,28 @@ const register = async (req, res, next) => {
     // Save user with OTP
     await user.save();
 
-    // In production, send OTP via email/SMS
-    // For development, log the OTP
+    // Send OTP email
+    try {
+      await sendVerificationOTPEmail(email, otp, firstName);
+      console.log('✅ Verification OTP email sent to:', email);
+    } catch (emailError) {
+      console.error('❌ Failed to send OTP email:', emailError.message);
+      // Continue registration even if email fails - OTP is logged for development
+    }
+
+    // Log OTP for development/testing
     console.log('=== OTP VERIFICATION ===');
     console.log('OTP for', email, ':', otp);
     console.log('OTP expires in 10 minutes');
     console.log('=========================');
+
+    // If employer registration, notify admins (optional - can be implemented later)
+    if (role === 'employer') {
+      console.log('=== EMPLOYER REGISTRATION ===');
+      console.log('New employer registration requires approval:', email);
+      console.log('Company:', companyInfo?.companyName);
+      console.log('=============================');
+    }
 
     // Generate auth token (user can login but account is not verified)
     const token = generateToken(user._id);
@@ -51,7 +82,9 @@ const register = async (req, res, next) => {
     res.status(201).json({
       success: true,
       token,
-      message: 'Account created successfully. Please check your email for the OTP.',
+      message: role === 'employer' 
+        ? 'Account created successfully. Please check your email for OTP. Your account will be activated after admin approval.'
+        : 'Account created successfully. Please check your email for the OTP.',
       data: {
         user: user.getPublicProfile(),
       },
@@ -76,8 +109,8 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Check for user
-    const user = await User.findOne({ email }).select('+password');
+    // Check for user (include 2FA fields)
+    const user = await User.findOne({ email }).select('+password +twoFactorAuth.enabled');
 
     if (!user) {
       return res.status(401).json({
@@ -95,6 +128,51 @@ const login = async (req, res, next) => {
         error: 'Invalid credentials',
       });
     }
+
+    // Check if employer is approved
+    if (user.role === 'employer' && !user.isApproved) {
+      return res.status(403).json({
+        success: false,
+        error: 'Your employer account is pending admin approval. Please wait for approval before logging in.',
+        approvalStatus: user.approvalStatus,
+      });
+    }
+
+    // Check if 2FA is enabled
+    if (user.twoFactorAuth.enabled) {
+      // Create login notification
+      await createNotification(
+        user._id,
+        'Login Attempt',
+        `A login attempt was made to your account at ${new Date().toLocaleString()}. Complete 2FA verification to access your account.`,
+        'general'
+      );
+
+      // Return userId so frontend can verify 2FA
+      return res.status(200).json({
+        success: true,
+        requires2FA: true,
+        userId: user._id,
+        message: '2FA verification required',
+        data: {
+          user: {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+          },
+        },
+      });
+    }
+
+    // Create login notification
+    await createNotification(
+      user._id,
+      'Login Successful',
+      `Welcome back, ${user.firstName}! You successfully logged in at ${new Date().toLocaleString()}.`,
+      'general'
+    );
 
     // Generate token
     const token = generateToken(user._id);
@@ -181,7 +259,7 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-// @desc    Forgot password
+// @desc    Forgot password - Send OTP
 // @route   POST /api/auth/forgot-password
 // @access  Public
 const forgotPassword = async (req, res) => {
@@ -209,33 +287,31 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    console.log('Generating reset token for user:', user.email);
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    console.log('Reset token generated:', resetToken);
+    console.log('Generating OTP for password reset:', user.email);
+    // Generate OTP
+    const otp = user.generateOTP();
+    console.log('OTP generated:', otp);
     
-    // Hash token and set to resetPasswordToken field
-    user.resetPasswordToken = crypto
-      .createHash('sha256')
-      .update(resetToken)
-      .digest('hex');
-
-    console.log('Hashed token:', user.resetPasswordToken);
-    // Set expire
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
-    console.log('Token expiry set:', user.resetPasswordExpire);
-
+    // Save user with OTP
     await user.save({ validateBeforeSave: false });
-    console.log('User saved successfully');
+    console.log('User saved with OTP successfully');
 
-    // In a real application, you would send an email here
-    // For now, we'll return the token in the response
-    // In production, use nodemailer or similar service
-    
+    // Send OTP email
+    try {
+      await sendOTPEmail(email, otp);
+      console.log('✅ Password reset OTP email sent to:', email);
+    } catch (emailError) {
+      console.error('❌ Failed to send OTP email:', emailError.message);
+      // Log OTP for development/testing
+      console.log('=== PASSWORD RESET OTP ===');
+      console.log('OTP for', email, ':', otp);
+      console.log('OTP expires in 10 minutes');
+      console.log('==========================');
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Password reset token generated. In production, this would be sent via email.',
-      resetToken, // Remove this in production - only for development/testing
+      message: 'OTP sent to your email for password reset',
     });
   } catch (error) {
     console.error('Error in forgotPassword:', error);
@@ -343,6 +419,63 @@ const verifyOTP = async (req, res, next) => {
   }
 };
 
+// @desc    Verify OTP for password reset
+// @route   POST /api/auth/verify-reset-otp
+// @access  Public
+const verifyResetOTP = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    
+    // Validate input
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide email and OTP',
+      });
+    }
+
+    // Find user with this email and OTP
+    const user = await User.findOne({
+      email,
+      otp,
+      otpExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired OTP',
+      });
+    }
+
+    // Generate a temporary reset token for password update
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Hash token and set to resetPasswordToken field
+    user.resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Set expire
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+    
+    // Clear OTP after successful verification
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      resetToken,
+      message: 'OTP verified successfully. You can now reset your password.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   register,
   login,
@@ -351,4 +484,5 @@ export {
   forgotPassword,
   resetPassword,
   verifyOTP,
+  verifyResetOTP,
 };

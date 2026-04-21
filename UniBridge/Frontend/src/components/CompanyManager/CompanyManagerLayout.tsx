@@ -23,6 +23,7 @@ import {
   User,
   Shield,
   BookOpen,
+  FileText,
 } from "lucide-react";
 import { useState, useEffect, ReactNode } from "react";
 import { toast } from "sonner";
@@ -58,6 +59,11 @@ const sidebarItems = [
     icon: BookOpen,
   },
   {
+    label: "View Results",
+    href: "/company/results",
+    icon: FileText,
+  },
+  {
     label: "Profile Settings",
     href: "/company/settings",
     icon: Settings,
@@ -74,8 +80,10 @@ const CompanyManagerLayout = ({ children }: CompanyManagerLayoutProps) => {
     if (role !== "employer" && role !== "admin") {
       toast.error("Access denied. Company Manager only.");
       navigate("/");
+    } else if (role === "employer" && !user?.isApproved) {
+      navigate("/pending-approval");
     }
-  }, [role, navigate]);
+  }, [role, user, navigate]);
 
   const handleSignOut = () => {
     logout();
