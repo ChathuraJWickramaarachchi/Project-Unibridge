@@ -54,7 +54,9 @@ class AdminService {
 
   async updateUser(id, userData) {
     const token = localStorage.getItem('token');
-    if (!token) return null;
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
 
     const response = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
       method: 'PUT',
@@ -66,12 +68,19 @@ class AdminService {
     });
 
     const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update user');
+    }
+    
     return data;
   }
 
   async deleteUser(id) {
     const token = localStorage.getItem('token');
-    if (!token) return null;
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
 
     const response = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
       method: 'DELETE',
@@ -82,12 +91,19 @@ class AdminService {
     });
 
     const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to delete user');
+    }
+    
     return data;
   }
 
   async verifyUser(id, isVerified) {
     const token = localStorage.getItem('token');
-    if (!token) return null;
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
 
     const response = await fetch(`${API_BASE_URL}/admin/users/${id}/verify`, {
       method: 'PUT',
@@ -99,6 +115,11 @@ class AdminService {
     });
 
     const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update verification status');
+    }
+    
     return data;
   }
 
