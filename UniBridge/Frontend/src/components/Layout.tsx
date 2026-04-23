@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import MaintenanceBanner from "@/components/MaintenanceBanner";
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,6 +17,7 @@ const Layout = ({ children, showFooter = true }: LayoutProps) => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {!hideChrome && <MaintenanceBanner />}
       {!hideChrome && <Navbar />}
       <main className="flex-1">
         {children}

@@ -123,7 +123,10 @@ const Navbar = () => {
           {user && protectedLinks.map((link) => (
             <button
               key={link.label}
-              onClick={() => navigate(link.href)}
+              onClick={() => {
+                console.log('Navigating to:', link.href);
+                navigate(link.href);
+              }}
               className={`text-sm font-medium transition-colors ${
                 isActive(link.href)
                   ? "text-foreground font-semibold border-b-2 border-primary pb-1"

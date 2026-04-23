@@ -60,20 +60,28 @@ import examRoutes from './routes/exams.js';
 import paymentRoutes from './routes/payments.js';
 import twoFactorRoutes from './routes/twoFactor.js';
 import resultsRoutes from './routes/results.js';
+import maintenanceRoutes from './routes/maintenance.js';
+import { checkMaintenanceMode } from './middleware/maintenance.js';
 
 console.log('Auth routes:', authRoutes);
+
+// IMPORTANT: Auth and 2FA routes MUST NOT have maintenance mode checking
+// because users don't have tokens yet during login process
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/feedback', feedbackRoutes);
-app.use('/api/departments', departmentRoutes);
-app.use('/api/jobs', jobRoutes);
-app.use('/api/applications', applicationRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/exams', examRoutes);
-app.use('/api/payments', paymentRoutes);
 app.use('/api/2fa', twoFactorRoutes);
-app.use('/api/results', resultsRoutes);
+
+// Check maintenance mode for all OTHER API routes (after auth is complete)
+app.use('/api/users', checkMaintenanceMode, userRoutes);
+app.use('/api/admin', checkMaintenanceMode, adminRoutes);
+app.use('/api/feedback', checkMaintenanceMode, feedbackRoutes);
+app.use('/api/departments', checkMaintenanceMode, departmentRoutes);
+app.use('/api/jobs', checkMaintenanceMode, jobRoutes);
+app.use('/api/applications', checkMaintenanceMode, applicationRoutes);
+app.use('/api/notifications', checkMaintenanceMode, notificationRoutes);
+app.use('/api/exams', checkMaintenanceMode, examRoutes);
+app.use('/api/payments', checkMaintenanceMode, paymentRoutes);
+app.use('/api/results', checkMaintenanceMode, resultsRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
 
 // Serve uploaded resumes statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -103,6 +111,32 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5001;
 
+// Automated maintenance mode completion checker
+const checkAndCompleteExpiredMaintenance = async () => {
+  try {
+    const Maintenance = (await import('./models/Maintenance.js')).default;
+    const now = new Date();
+
+    // Find all active maintenance modes that have passed their end time
+    const expiredMaintenance = await Maintenance.find({
+      isMaintenanceMode: true,
+      status: 'active',
+      scheduledEndTime: { $lte: now },
+    });
+
+    if (expiredMaintenance.length > 0) {
+      console.log(`\n🔧 Found ${expiredMaintenance.length} expired maintenance session(s). Auto-completing...`);
+      
+      for (const maintenance of expiredMaintenance) {
+        await maintenance.deactivateMaintenanceMode();
+        console.log(`   ✅ Auto-completed: "${maintenance.title}" (ended at ${maintenance.scheduledEndTime})`);
+      }
+    }
+  } catch (error) {
+    console.error('Error checking expired maintenance:', error);
+  }
+};
+
 const startServer = async () => {
   // connectDB no longer throws — it logs and retries in the background
   await connectDB();
@@ -110,7 +144,14 @@ const startServer = async () => {
   const server = app.listen(PORT, () => {
     console.log(`\n🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     console.log(`   Health check: http://localhost:${PORT}/api/health`);
+    console.log(`   Auto-maintenance checker: Running every 60 seconds`);
   });
+
+  // Run maintenance checker every 60 seconds
+  setInterval(checkAndCompleteExpiredMaintenance, 60 * 1000);
+  
+  // Also run immediately on startup
+  setTimeout(checkAndCompleteExpiredMaintenance, 5000);
 
   // Handle unhandled promise rejections
   process.on('unhandledRejection', (err) => {

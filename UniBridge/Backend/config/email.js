@@ -246,8 +246,103 @@ const sendVerificationOTPEmail = async (email, otp, firstName = '') => {
   }
 };
 
+// Send maintenance notification email
+const sendMaintenanceNotification = async (email, firstName, maintenance) => {
+  try {
+    console.log('📧 Attempting to send maintenance email to:', email);
+    console.log('📋 Maintenance details:', {
+      title: maintenance.title,
+      severity: maintenance.severity,
+      startTime: maintenance.scheduledStartTime,
+    });
+
+    const transporter = createTransporter();
+
+    const startTime = new Date(maintenance.scheduledStartTime).toLocaleString();
+    const endTime = new Date(maintenance.scheduledEndTime).toLocaleString();
+
+    const severityEmoji = {
+      low: 'ℹ️',
+      medium: '⚠️',
+      high: '🔶',
+      critical: '🔴',
+    };
+
+    const mailOptions = {
+      from: `"UniBridge" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: `${severityEmoji[maintenance.severity] || '🔧'} Maintenance Notification: ${maintenance.title}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🔧 System Maintenance</h1>
+          </div>
+          
+          <div style="padding: 30px; background: #f9f9f9;">
+            <p style="font-size: 16px; color: #333;">Hi ${firstName},</p>
+            
+            <p style="font-size: 16px; color: #333; line-height: 1.6;">
+              We want to inform you about upcoming system maintenance that will affect UniBridge services.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+              <h2 style="color: #667eea; margin-top: 0;">${maintenance.title}</h2>
+              <p style="color: #666; line-height: 1.6;">${maintenance.description}</p>
+              
+              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                <p style="margin: 5px 0;"><strong>📅 Start Time:</strong> ${startTime}</p>
+                <p style="margin: 5px 0;"><strong>📅 End Time:</strong> ${endTime}</p>
+                <p style="margin: 5px 0;"><strong>⚡ Severity:</strong> ${maintenance.severity.toUpperCase()}</p>
+                <p style="margin: 5px 0;"><strong>📋 Type:</strong> ${maintenance.type.toUpperCase()}</p>
+              </div>
+            </div>
+            
+            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; color: #856404;">
+                <strong>What to expect:</strong> During this maintenance window, you may experience limited access to some features. 
+                We apologize for any inconvenience and appreciate your patience.
+              </p>
+            </div>
+            
+            <p style="font-size: 14px; color: #666; margin-top: 30px;">
+              If you have any questions or concerns, please contact our support team.
+            </p>
+            
+            <p style="font-size: 16px; color: #333;">
+              Thank you for your understanding.<br>
+              <strong>The UniBridge Team</strong>
+            </p>
+          </div>
+          
+          <div style="background: #333; color: #999; padding: 20px; text-align: center; font-size: 12px;">
+            <p style="margin: 0;">© ${new Date().getFullYear()} UniBridge. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0;">This is an automated notification. Please do not reply to this email.</p>
+          </div>
+        </div>
+      `,
+    };
+
+    console.log('📤 Sending email with options:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+    });
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Maintenance notification email sent successfully to:', email);
+    console.log('📬 Message ID:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Error sending maintenance notification email to:', email);
+    console.error('Error details:', error.message);
+    console.error('Full error:', error);
+    throw new Error(`Failed to send maintenance email: ${error.message}`);
+  }
+};
+
 export {
   sendOTPEmail,
   sendVerificationOTPEmail,
+  sendMaintenanceNotification,
   verifyTransporter,
 };

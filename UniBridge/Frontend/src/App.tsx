@@ -36,6 +36,7 @@ import AdminEmployers from "./pages/Admin/Employers";
 import AdminAnalytics from "./pages/Admin/Analytics";
 import AdminSettings from "./pages/Admin/Settings";
 import AdminFeedback from "./pages/Admin/Feedback";
+import MaintenanceManagement from "./pages/Admin/Maintenance";
 import CreateExam from "./pages/Admin/CreateExam";
 import AddQuestions from "./pages/Admin/AddQuestions";
 import ViewExams from "./pages/Admin/ViewExams";
@@ -61,6 +62,7 @@ import SecureExamCompleted from "./pages/SecureExamCompleted";
 // Password Reset
 import ResetPasswordForm from "./components/auth/ResetPasswordForm";
 import VerifyEmail from "./pages/VerifyEmail";
+import MaintenancePage from "./pages/MaintenancePage";
 
 const queryClient = new QueryClient();
 
@@ -158,12 +160,17 @@ const App = () => {
               <Route path="/admin/exams/view" element={<AdminLayout><ViewExams /></AdminLayout>} />
               <Route path="/admin/exams/questions/view" element={<AdminLayout><ViewQuestions /></AdminLayout>} />
               <Route path="/admin/exams/results" element={<AdminLayout><ViewResults /></AdminLayout>} />
+              <Route path="/admin/maintenance" element={<AdminLayout><MaintenanceManagement /></AdminLayout>} />
               
               {/* Password Reset Route */}
               <Route path="/reset-password/:token" element={<Layout showFooter={false}><ResetPasswordForm /></Layout>} />
               
               {/* Email Verification Route */}
               <Route path="/verify-email/:token" element={<Layout showFooter={false}><VerifyEmail /></Layout>} />
+              
+              {/* Maintenance Mode Route */}
+              <Route path="/maintenance" element={<MaintenancePage />} />
+              <Route path="/maintenance-info" element={<Layout><MaintenancePage /></Layout>} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<Layout><NotFound /></Layout>} />

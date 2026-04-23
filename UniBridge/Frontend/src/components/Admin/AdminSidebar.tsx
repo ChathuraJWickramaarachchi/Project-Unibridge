@@ -12,7 +12,8 @@ import {
   GraduationCap,
   FileText,
   HelpCircle,
-  CheckSquare
+  CheckSquare,
+  Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,6 +80,14 @@ const AdminSidebar = () => {
       name: "View Results",
       href: "/admin/exams/results",
       icon: BarChart3,
+    },
+  ];
+
+  const systemNavigation = [
+    {
+      name: "Maintenance",
+      href: "/admin/maintenance",
+      icon: Wrench,
     },
   ];
 
@@ -183,6 +192,39 @@ const AdminSidebar = () => {
               </li>
 
               {examNavigation.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href) || activePath === item.href;
+                
+                return (
+                  <li key={item.name}>
+                    <Link
+                      to={item.href}
+                      className={`admin-nav-link ${active ? 'active' : ''} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out ${
+                        active
+                          ? "bg-primary text-primary-foreground shadow-md relative z-10 border-l-4 border-primary cursor-default"
+                          : "text-muted-foreground hover:text-accent-foreground hover:shadow-md hover:translate-x-1 relative z-10 hover:bg-accent/50"
+                      }`}
+                    >
+                      <div className="relative">
+                        <Icon className="h-5 w-5" />
+                        {active && (
+                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full border-2 border-primary"></div>
+                        )}
+                      </div>
+                      <span>{item.name}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+
+              {/* System Management Section */}
+              <li className="pt-4">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pl-3 mb-2">
+                  System Management
+                </h3>
+              </li>
+
+              {systemNavigation.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href) || activePath === item.href;
                 

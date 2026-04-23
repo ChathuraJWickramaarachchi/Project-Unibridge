@@ -11,6 +11,22 @@ import { User, Building, Shield, CheckCircle, XCircle, ArrowLeft, Save, Mail, Ca
 import AdminService from "@/services/adminService";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import {
+  validateEmail,
+  validateName,
+  validateUniversity,
+  validateMajor,
+  validateYear,
+} from "@/lib/validation";
+
+interface FormErrors {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  university?: string;
+  major?: string;
+  year?: string;
+}
 
 const AdminUserDetail = () => {
   const { id } = useParams();
@@ -20,6 +36,7 @@ const AdminUserDetail = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -83,7 +100,66 @@ const AdminUserDetail = () => {
     }
   };
 
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+    
+    // Validate first name
+    const firstNameValidation = validateName(formData.firstName.trim(), "First name");
+    if (!firstNameValidation.isValid) {
+      newErrors.firstName = firstNameValidation.error;
+    }
+    
+    // Validate last name
+    const lastNameValidation = validateName(formData.lastName.trim(), "Last name");
+    if (!lastNameValidation.isValid) {
+      newErrors.lastName = lastNameValidation.error;
+    }
+    
+    // Validate email
+    const emailValidation = validateEmail(formData.email.trim());
+    if (!emailValidation.isValid) {
+      newErrors.email = emailValidation.error;
+    }
+    
+    // Validate university (optional but if provided, validate it)
+    if (formData.profile.university.trim()) {
+      const universityValidation = validateUniversity(formData.profile.university);
+      if (!universityValidation.isValid) {
+        newErrors.university = universityValidation.error;
+      }
+    }
+    
+    // Validate major (optional but if provided, validate it)
+    if (formData.profile.major.trim()) {
+      const majorValidation = validateMajor(formData.profile.major);
+      if (!majorValidation.isValid) {
+        newErrors.major = majorValidation.error;
+      }
+    }
+    
+    // Validate year (optional but if provided, validate it)
+    if (formData.profile.year) {
+      const yearValidation = validateYear(formData.profile.year);
+      if (!yearValidation.isValid) {
+        newErrors.year = yearValidation.error;
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
+    // Validate form before saving
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix the errors in the form",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       setSaving(true);
       const response = await AdminService.updateUser(id!, formData);
@@ -94,6 +170,13 @@ const AdminUserDetail = () => {
         });
         setUser(response.data);
         setEditMode(false);
+        setErrors({});
+      } else {
+        toast({
+          title: "Error",
+          description: response?.error || "Failed to update user",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       toast({
@@ -224,7 +307,14 @@ const AdminUserDetail = () => {
                       id="firstName"
                       value={formData.firstName}
                       onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                      className={errors.firstName ? "border-red-500" : ""}
                     />
+                    {errors.firstName && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {errors.firstName}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
@@ -232,7 +322,14 @@ const AdminUserDetail = () => {
                       id="lastName"
                       value={formData.lastName}
                       onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                      className={errors.lastName ? "border-red-500" : ""}
                     />
+                    {errors.lastName && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {errors.lastName}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
@@ -241,7 +338,14 @@ const AdminUserDetail = () => {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      className={errors.email ? "border-red-500" : ""}
                     />
+                    {errors.email && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {errors.email}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
@@ -300,7 +404,14 @@ const AdminUserDetail = () => {
                         ...prev,
                         profile: { ...prev.profile, university: e.target.value }
                       }))}
+                      className={errors.university ? "border-red-500" : ""}
                     />
+                    {errors.university && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {errors.university}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="major">Major</Label>
@@ -311,7 +422,14 @@ const AdminUserDetail = () => {
                         ...prev,
                         profile: { ...prev.profile, major: e.target.value }
                       }))}
+                      className={errors.major ? "border-red-500" : ""}
                     />
+                    {errors.major && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {errors.major}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="year">Year</Label>
@@ -323,7 +441,14 @@ const AdminUserDetail = () => {
                         ...prev,
                         profile: { ...prev.profile, year: e.target.value }
                       }))}
+                      className={errors.year ? "border-red-500" : ""}
                     />
+                    {errors.year && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <XCircle className="w-3 h-3" />
+                        {errors.year}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="bio">Bio</Label>

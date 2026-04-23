@@ -82,12 +82,105 @@ const updateUser = async (req, res, next) => {
   try {
     const { firstName, lastName, email, role, isVerified, profile } = req.body;
     
+    // Validate required fields if provided
+    if (firstName !== undefined) {
+      if (!firstName || firstName.trim().length < 2) {
+        return res.status(400).json({
+          success: false,
+          error: 'First name must be at least 2 characters long',
+        });
+      }
+      if (firstName.trim().length > 50) {
+        return res.status(400).json({
+          success: false,
+          error: 'First name cannot exceed 50 characters',
+        });
+      }
+    }
+    
+    if (lastName !== undefined) {
+      if (!lastName || lastName.trim().length < 2) {
+        return res.status(400).json({
+          success: false,
+          error: 'Last name must be at least 2 characters long',
+        });
+      }
+      if (lastName.trim().length > 50) {
+        return res.status(400).json({
+          success: false,
+          error: 'Last name cannot exceed 50 characters',
+        });
+      }
+    }
+    
+    // Validate email format and check for duplicates
+    if (email !== undefined) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please enter a valid email address',
+        });
+      }
+      
+      // Check if email is already used by another user
+      const existingUser = await User.findOne({ email, _id: { $ne: req.params.id } });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          error: 'Email is already in use by another user',
+        });
+      }
+    }
+    
+    // Validate role
+    if (role !== undefined) {
+      const validRoles = ['admin', 'student', 'employer'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid role. Must be admin, student, or employer',
+        });
+      }
+    }
+    
+    // Validate profile fields if provided
+    if (profile !== undefined) {
+      if (profile.university && profile.university.length > 100) {
+        return res.status(400).json({
+          success: false,
+          error: 'University name cannot exceed 100 characters',
+        });
+      }
+      if (profile.major && profile.major.length > 100) {
+        return res.status(400).json({
+          success: false,
+          error: 'Major cannot exceed 100 characters',
+        });
+      }
+      if (profile.year) {
+        const yearNum = parseInt(profile.year);
+        if (isNaN(yearNum) || yearNum < 1 || yearNum > 10) {
+          return res.status(400).json({
+            success: false,
+            error: 'Year must be between 1 and 10',
+          });
+        }
+      }
+      if (profile.bio && profile.bio.length > 500) {
+        return res.status(400).json({
+          success: false,
+          error: 'Bio cannot exceed 500 characters',
+        });
+      }
+    }
+    
     // Build update object
     const updateFields = {};
     
-    if (firstName !== undefined) updateFields.firstName = firstName;
-    if (lastName !== undefined) updateFields.lastName = lastName;
-    if (email !== undefined) updateFields.email = email;
+    if (firstName !== undefined) updateFields.firstName = firstName.trim();
+    if (lastName !== undefined) updateFields.lastName = lastName.trim();
+    if (email !== undefined) updateFields.email = email.toLowerCase().trim();
     if (role !== undefined) updateFields.role = role;
     if (isVerified !== undefined) updateFields.isVerified = isVerified;
     if (profile !== undefined) updateFields.profile = profile;
@@ -112,8 +205,26 @@ const updateUser = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: user,
+      message: 'User updated successfully',
     });
   } catch (error) {
+    // Handle mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        error: messages.join(', '),
+      });
+    }
+    
+    // Handle duplicate key error (email)
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is already in use',
+      });
+    }
+    
     next(error);
   }
 };

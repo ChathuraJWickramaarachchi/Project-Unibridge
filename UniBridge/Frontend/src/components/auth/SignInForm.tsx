@@ -8,35 +8,73 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { validateEmail, validatePassword } from "@/lib/validation";
 import PasswordResetDialog from "./PasswordResetDialog";
+import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
+
+interface FieldErrors {
+  email?: string;
+  password?: string;
+}
+
+interface TouchedFields {
+  email: boolean;
+  password: boolean;
+}
 
 const SignInForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<TouchedFields>({
+    email: false,
+    password: false,
+  });
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  const validateField = (name: string, value: string) => {
+    let error: string | undefined;
+    
+    switch (name) {
+      case 'email':
+        const emailVal = validateEmail(value.trim());
+        error = emailVal.isValid ? undefined : emailVal.error;
+        break;
+      case 'password':
+        const passwordVal = validatePassword(value);
+        error = passwordVal.isValid ? undefined : passwordVal.error;
+        break;
+    }
+    
+    setErrors(prev => ({ ...prev, [name]: error }));
+    return error;
+  };
+
+  const handleBlur = (field: string, value: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    validateField(field, value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form fields
-    const emailValidation = validateEmail(email.trim());
-    const passwordValidation = validatePassword(password);
+    // Mark all fields as touched
+    setTouched({
+      email: true,
+      password: true,
+    });
     
-    if (!emailValidation.isValid) {
+    // Validate all fields
+    const emailError = validateField('email', email);
+    const passwordError = validateField('password', password);
+    
+    // Check if any validation failed
+    if (emailError || passwordError) {
       toast({
         title: "Validation Error",
-        description: emailValidation.error,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!passwordValidation.isValid) {
-      toast({
-        title: "Validation Error",
-        description: passwordValidation.error,
+        description: "Please fix the errors in the form",
         variant: "destructive"
       });
       return;
@@ -91,45 +129,56 @@ const SignInForm = () => {
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email Address *</Label>
             <Input
               id="email"
               type="email"
               placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => handleBlur('email', email)}
+              className={touched.email && errors.email ? "border-red-500 focus-visible:ring-red-500" : touched.email && !errors.email && email ? "border-green-500" : ""}
               required
-              onBlur={(e) => {
-                const validation = validateEmail(e.target.value.trim());
-                if (!validation.isValid && e.target.value.trim()) {
-                  toast({
-                    title: "Validation Error",
-                    description: validation.error,
-                    variant: "destructive"
-                  });
-                }
-              }}
             />
+            {touched.email && errors.email && (
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <XCircle className="w-3 h-3" />
+                {errors.email}
+              </p>
+            )}
+            {touched.email && !errors.email && email && (
+              <p className="text-xs text-green-500 flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                Valid email
+              </p>
+            )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              onBlur={(e) => {
-                const validation = validatePassword(e.target.value);
-                if (!validation.isValid && e.target.value) {
-                  toast({
-                    title: "Validation Error",
-                    description: validation.error,
-                    variant: "destructive"
-                  });
-                }
-              }}
-            />
+            <Label htmlFor="password">Password *</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => handleBlur('password', password)}
+                className={touched.password && errors.password ? "border-red-500 focus-visible:ring-red-500 pr-10" : touched.password && !errors.password && password ? "border-green-500 pr-10" : "pr-10"}
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {touched.password && errors.password && (
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <XCircle className="w-3 h-3" />
+                {errors.password}
+              </p>
+            )}
           </div>
         </CardContent>
         <CardFooter className="flex flex-col">
