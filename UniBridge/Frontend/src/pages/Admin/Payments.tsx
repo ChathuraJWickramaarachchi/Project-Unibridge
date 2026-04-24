@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   CreditCard, 
   DollarSign, 
@@ -13,10 +14,55 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import axios from "axios";
+
+interface PaymentData {
+  _id: string;
+  userId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  } | null;
+  cvData: {
+    fullName: string;
+    email: string;
+    phone: string;
+  };
+  paymentDetails: {
+    amount: number;
+    currency: string;
+    paymentMethod: string;
+    transactionId: string;
+    paymentStatus: string;
+    cardLastFour: string | null;
+    paymentProvider: string;
+  };
+  downloadInfo: {
+    downloadCount: number;
+    lastDownloadedAt: string | null;
+  };
+  createdAt: string;
+}
+
+interface PaymentStats {
+  totalRevenue: number;
+  totalTransactions: number;
+  successfulPayments: number;
+  activeUsers: number;
+}
 
 const Payments = () => {
   const [loading, setLoading] = useState(true);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [payments, setPayments] = useState<PaymentData[]>([]);
+  const [stats, setStats] = useState<PaymentStats>({
+    totalRevenue: 0,
+    totalTransactions: 0,
+    successfulPayments: 0,
+    activeUsers: 0,
+  });
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [methodFilter, setMethodFilter] = useState<string>("all");
   const { role } = useAuth();
   const navigate = useNavigate();
 
@@ -37,18 +83,117 @@ const Payments = () => {
   const loadPayments = async () => {
     try {
       setLoading(true);
-      // Placeholder: Replace with actual API call
-      // const response = await fetch('/api/admin/payments');
-      setPayments([]);
+      const token = localStorage.getItem('token');
+      const response = await axios.get("/api/admin/payments", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setPayments(response.data.data);
+        if (response.data.stats) {
+          setStats(response.data.stats);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: response.data.message || "Failed to load payments",
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to load payments",
+        description: error.response?.data?.message || error.message || "Failed to load payments",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
+      completed: { variant: "default", label: "Completed" },
+      processing: { variant: "secondary", label: "Processing" },
+      pending: { variant: "outline", label: "Pending" },
+      failed: { variant: "destructive", label: "Failed" },
+      refunded: { variant: "secondary", label: "Refunded" },
+    };
+    const config = statusConfig[status] || { variant: "outline" as const, label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getMethodLabel = (method: string) => {
+    const labels: Record<string, string> = {
+      card: "💳 Card",
+      paypal: "🅿️ PayPal",
+      stripe: "⚡ Stripe",
+    };
+    return labels[method] || method;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getUserName = (payment: PaymentData) => {
+    if (payment.userId) {
+      return `${payment.userId.firstName} ${payment.userId.lastName}`;
+    }
+    return payment.cvData?.fullName || "Unknown User";
+  };
+
+  const getUserEmail = (payment: PaymentData) => {
+    if (payment.userId) {
+      return payment.userId.email;
+    }
+    return payment.cvData?.email || "";
+  };
+
+  // Apply filters
+  const filteredPayments = payments.filter((p) => {
+    if (statusFilter !== "all" && p.paymentDetails.paymentStatus !== statusFilter) return false;
+    if (methodFilter !== "all" && p.paymentDetails.paymentMethod !== methodFilter) return false;
+    return true;
+  });
+
+  const successRate = stats.totalTransactions > 0
+    ? Math.round((stats.successfulPayments / stats.totalTransactions) * 100)
+    : 0;
+
+  const exportToCSV = () => {
+    if (filteredPayments.length === 0) {
+      toast({ title: "No data", description: "No payments to export", variant: "destructive" });
+      return;
+    }
+
+    const headers = ["Transaction ID", "User", "Email", "Amount", "Currency", "Method", "Status", "Date"];
+    const rows = filteredPayments.map((p) => [
+      p.paymentDetails.transactionId,
+      getUserName(p),
+      getUserEmail(p),
+      p.paymentDetails.amount.toFixed(2),
+      p.paymentDetails.currency,
+      p.paymentDetails.paymentMethod,
+      p.paymentDetails.paymentStatus,
+      new Date(p.createdAt).toISOString(),
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((r) => r.map((c) => `"${c}"`).join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `payments_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Exported", description: `${filteredPayments.length} payment(s) exported to CSV` });
   };
 
   return (
@@ -63,7 +208,7 @@ const Payments = () => {
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={exportToCSV}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -78,9 +223,9 @@ const Payments = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$0.00</div>
+            <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              +0% from last month
+              From {stats.successfulPayments} completed payment{stats.successfulPayments !== 1 ? "s" : ""}
             </p>
           </CardContent>
         </Card>
@@ -90,9 +235,9 @@ const Payments = () => {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.totalTransactions}</div>
             <p className="text-xs text-muted-foreground">
-              +0 this month
+              All time transactions
             </p>
           </CardContent>
         </Card>
@@ -102,9 +247,9 @@ const Payments = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.successfulPayments}</div>
             <p className="text-xs text-muted-foreground">
-              0% success rate
+              {successRate}% success rate
             </p>
           </CardContent>
         </Card>
@@ -114,7 +259,7 @@ const Payments = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.activeUsers}</div>
             <p className="text-xs text-muted-foreground">
               Users with payments
             </p>
@@ -129,19 +274,47 @@ const Payments = () => {
           <CardDescription>Filter payment transactions</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" />
-              Date Range
-            </Button>
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" />
-              Status
-            </Button>
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" />
-              Payment Method
-            </Button>
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <select
+                className="border rounded-md px-3 py-2 text-sm bg-background"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Status</option>
+                <option value="completed">Completed</option>
+                <option value="processing">Processing</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+                <option value="refunded">Refunded</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <select
+                className="border rounded-md px-3 py-2 text-sm bg-background"
+                value={methodFilter}
+                onChange={(e) => setMethodFilter(e.target.value)}
+              >
+                <option value="all">All Methods</option>
+                <option value="card">Card</option>
+                <option value="paypal">PayPal</option>
+                <option value="stripe">Stripe</option>
+              </select>
+            </div>
+            {(statusFilter !== "all" || methodFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setMethodFilter("all");
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -150,7 +323,11 @@ const Payments = () => {
       <Card>
         <CardHeader>
           <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>View all payment transactions</CardDescription>
+          <CardDescription>
+            {filteredPayments.length === payments.length
+              ? `Showing all ${payments.length} payment transaction${payments.length !== 1 ? "s" : ""}`
+              : `Showing ${filteredPayments.length} of ${payments.length} payment transaction${payments.length !== 1 ? "s" : ""}`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -160,12 +337,16 @@ const Payments = () => {
                 <p className="text-muted-foreground">Loading payments...</p>
               </div>
             </div>
-          ) : payments.length === 0 ? (
+          ) : filteredPayments.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <CreditCard className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No payments yet</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {payments.length === 0 ? "No payments yet" : "No matching payments"}
+              </h3>
               <p className="text-muted-foreground">
-                Payment transactions will appear here once users make payments.
+                {payments.length === 0
+                  ? "Payment transactions will appear here once users make payments."
+                  : "Try adjusting your filters to see more results."}
               </p>
             </div>
           ) : (
@@ -176,13 +357,52 @@ const Payments = () => {
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Transaction ID</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">User</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Amount</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Method</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Downloads</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Date</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="[&_tr:last-child]:border-0">
-                  {/* Payment rows will go here */}
+                  {filteredPayments.map((payment) => (
+                    <tr
+                      key={payment._id}
+                      className="border-b transition-colors hover:bg-muted/50"
+                    >
+                      <td className="p-4 align-middle font-mono text-xs">
+                        {payment.paymentDetails.transactionId}
+                      </td>
+                      <td className="p-4 align-middle">
+                        <div>
+                          <div className="font-medium">{getUserName(payment)}</div>
+                          <div className="text-xs text-muted-foreground">{getUserEmail(payment)}</div>
+                        </div>
+                      </td>
+                      <td className="p-4 align-middle font-medium">
+                        ${payment.paymentDetails.amount.toFixed(2)}
+                        <span className="text-xs text-muted-foreground ml-1">
+                          {payment.paymentDetails.currency}
+                        </span>
+                      </td>
+                      <td className="p-4 align-middle text-sm">
+                        {getMethodLabel(payment.paymentDetails.paymentMethod)}
+                        {payment.paymentDetails.cardLastFour && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ••••{payment.paymentDetails.cardLastFour}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 align-middle">
+                        {getStatusBadge(payment.paymentDetails.paymentStatus)}
+                      </td>
+                      <td className="p-4 align-middle text-center">
+                        {payment.downloadInfo.downloadCount}
+                      </td>
+                      <td className="p-4 align-middle text-sm text-muted-foreground">
+                        {formatDate(payment.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

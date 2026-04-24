@@ -39,6 +39,7 @@ import {
   getExamResultsByExam
 } from '../controllers/examResultsController.js';
 import { protect, authorize } from '../middleware/auth.js';
+import { getAllPaymentsForAdmin } from '../controllers/paymentController.js';
 
 const router = express.Router();
 
@@ -84,12 +85,6 @@ router.get('/exam-results', getAllExamResults);
 // Admin Payment Routes
 // Note: Payment data is managed through /api/payments routes
 // This endpoint provides admin-specific payment analytics
-router.get('/payments', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Admin payments endpoint - integrate with payment controller for full functionality',
-    data: []
-  });
-});
+router.get('/payments', getAllPaymentsForAdmin);
 
 export default router;

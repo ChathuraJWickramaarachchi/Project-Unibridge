@@ -356,10 +356,48 @@ const getPaymentStats = async (req, res) => {
   }
 };
 
+// @desc    Get all payments for admin
+// @route   GET /api/admin/payments
+// @access  Private/Admin
+const getAllPaymentsForAdmin = async (req, res) => {
+  try {
+    const payments = await Payment.find()
+      .populate('userId', 'firstName lastName email')
+      .sort({ createdAt: -1 });
+
+    // Compute stats
+    const totalRevenue = payments
+      .filter(p => p.paymentDetails.paymentStatus === 'completed')
+      .reduce((sum, p) => sum + (p.paymentDetails.amount || 0), 0);
+    const totalTransactions = payments.length;
+    const successfulPayments = payments.filter(p => p.paymentDetails.paymentStatus === 'completed').length;
+    const activeUsers = [...new Set(payments.map(p => p.userId?._id?.toString()))].length;
+
+    res.status(200).json({
+      success: true,
+      data: payments,
+      stats: {
+        totalRevenue,
+        totalTransactions,
+        successfulPayments,
+        activeUsers,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch payments',
+      error: error.message,
+    });
+  }
+};
+
 export {
   processPayment,
   getPaymentById,
   getUserPayments,
   downloadCV,
-  getPaymentStats
+  getPaymentStats,
+  getAllPaymentsForAdmin
 };
