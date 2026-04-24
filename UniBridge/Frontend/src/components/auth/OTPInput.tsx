@@ -14,7 +14,8 @@ const OTPInput = ({ length = 6, onChange, disabled = false }: OTPInputProps) => 
 
   useEffect(() => {
     onChange(otp.join(""));
-  }, [otp, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp]);
 
   const handleChange = (index: number, value: string) => {
     if (value.length > 1) return; // Only allow single digit

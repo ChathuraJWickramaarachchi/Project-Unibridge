@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import dns from 'dns';
 
 let retryTimer = null;
 const RETRY_INTERVAL_MS = 30000; // Retry every 30 seconds
@@ -42,7 +43,7 @@ const resolveSrvUri = (mongoUri) => {
   });
 };
 
-const attemptConnect = async () => {
+const connectDB = async () => {
   try {
     console.log('Attempting to connect to MongoDB...');
     console.log('MongoDB URI:', 'Provided (hidden for security)');

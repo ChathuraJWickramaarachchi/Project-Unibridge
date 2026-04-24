@@ -10,6 +10,7 @@ interface User {
   email: string;
   role: AppRole;
   isVerified: boolean;
+  isApproved?: boolean;
   phone?: string;
   address?: string;
   profile?: {
@@ -71,7 +72,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     const response = await AuthService.login({ email, password });
-    if (response.success) {
+    if (response.success && !response.requires2FA) {
+      // Only set user if 2FA is NOT required
       setUser(response.data.user);
     }
     return response;

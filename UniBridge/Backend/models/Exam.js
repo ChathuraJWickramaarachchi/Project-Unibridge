@@ -64,5 +64,5 @@ examSchema.index({ companyId: 1, examDate: -1 });
 examSchema.index({ studentIds: 1 });
 examSchema.index({ jobId: 1 });
 
-module.exports = mongoose.model('Exam', examSchema, 'exam_schedule');
+export default mongoose.model('Exam', examSchema, 'exam_schedule');
 

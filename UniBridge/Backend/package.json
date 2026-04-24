@@ -13,6 +13,8 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@aws-sdk/credential-providers": "^3.1032.0",
+    "aws-sdk": "^2.1693.0",
     "axios": "^1.14.0",
     "bcryptjs": "^3.0.3",
     "canvas": "^3.2.3",
@@ -22,13 +24,17 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
+    "mongodb": "^4.17.1",
     "mongoose": "^9.2.2",
     "multer": "^2.1.0",
+    "nodemailer": "^8.0.5",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "pdfkit": "^0.18.0",
+    "qrcode": "^1.5.4",
+    "speakeasy": "^2.0.0",
     "unibridge": "file:.."
   },
   "devDependencies": {

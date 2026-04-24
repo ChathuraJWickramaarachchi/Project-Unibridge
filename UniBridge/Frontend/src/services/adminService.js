@@ -101,6 +101,55 @@ class AdminService {
     const data = await response.json();
     return data;
   }
+
+  async getPendingEmployers() {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    const response = await fetch(`${API_BASE_URL}/admin/employers/pending`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  }
+
+  async approveEmployer(id) {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    const response = await fetch(`${API_BASE_URL}/admin/employers/${id}/approve`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  }
+
+  async rejectEmployer(id, reason) {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    const response = await fetch(`${API_BASE_URL}/admin/employers/${id}/reject`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ reason }),
+    });
+
+    const data = await response.json();
+    return data;
+  }
 }
 
 export default new AdminService();
