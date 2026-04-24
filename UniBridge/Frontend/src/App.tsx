@@ -34,6 +34,7 @@ import AdminEmployers from "./pages/Admin/Employers";
 import AdminAnalytics from "./pages/Admin/Analytics";
 import AdminSettings from "./pages/Admin/Settings";
 import AdminFeedback from "./pages/Admin/Feedback";
+import Payments from "./pages/Admin/Payments";
 import CreateExam from "./pages/Admin/CreateExam";
 import AddQuestions from "./pages/Admin/AddQuestions";
 import ViewExams from "./pages/Admin/ViewExams";
@@ -149,6 +150,7 @@ const App = () => {
               <Route path="/admin/employers" element={<AdminLayout><AdminEmployers /></AdminLayout>} />
               <Route path="/admin/feedback" element={<AdminLayout><AdminFeedback /></AdminLayout>} />
               <Route path="/admin/analytics" element={<AdminLayout><AdminAnalytics /></AdminLayout>} />
+              <Route path="/admin/payments" element={<AdminLayout><Payments /></AdminLayout>} />
               <Route path="/admin/settings" element={<AdminLayout><AdminSettings /></AdminLayout>} />
               
               {/* Exam Management Routes */}

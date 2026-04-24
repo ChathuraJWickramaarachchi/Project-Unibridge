@@ -81,4 +81,15 @@ router.get('/exam-results/stats', getExamResultsStatistics);
 router.get('/exam-results/exam/:examName', getExamResultsByExam);
 router.get('/exam-results', getAllExamResults);
 
+// Admin Payment Routes
+// Note: Payment data is managed through /api/payments routes
+// This endpoint provides admin-specific payment analytics
+router.get('/payments', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Admin payments endpoint - integrate with payment controller for full functionality',
+    data: []
+  });
+});
+
 export default router;

@@ -12,7 +12,8 @@ import {
   GraduationCap,
   FileText,
   HelpCircle,
-  CheckSquare
+  CheckSquare,
+  CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,6 +52,11 @@ const AdminSidebar = () => {
       name: "Analytics",
       href: "/admin/analytics",
       icon: BarChart3,
+    },
+    {
+      name: "Payments",
+      href: "/admin/payments",
+      icon: CreditCard,
     },
   ];
 
