@@ -10,6 +10,7 @@ interface User {
   email: string;
   role: AppRole;
   isVerified: boolean;
+  isApproved?: boolean;
   phone?: string;
   address?: string;
   profile?: {

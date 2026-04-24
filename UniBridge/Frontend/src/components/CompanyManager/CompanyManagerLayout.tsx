@@ -16,7 +16,6 @@ import {
   Menu,
   X,
   LogOut,
-  Bell,
   ChevronRight,
   ChevronDown,
   Home,
