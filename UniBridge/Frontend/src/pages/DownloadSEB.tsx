@@ -43,8 +43,9 @@ const DownloadSEB = () => {
     const downloaded = await downloadSEBConfig();
     if (downloaded) {
       toast.success(
-        "Exam config downloaded. If SEB does not open automatically, open the downloaded .seb file from your downloads folder."
+        "Exam config downloaded. Opening the secure exam login..."
       );
+      navigate(`/secure-exam-login/${examId}?lockdown=true`, { replace: true });
     }
   };
 
