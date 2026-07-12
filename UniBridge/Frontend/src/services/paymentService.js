@@ -88,7 +88,29 @@ class PaymentService {
       
       if (error.response) {
         // Server responded with error status
-        const errorMessage = error.response.data?.message || error.response.data?.error || 'Download failed';
+        let errorMessage = 'Download failed';
+        
+        if (error.response.data instanceof Blob) {
+          try {
+            const text = await error.response.data.text();
+            const errorData = JSON.parse(text);
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch (e) {
+            console.error('Error parsing blob error response:', e);
+          }
+        } else {
+          errorMessage = error.response.data?.message || error.response.data?.error || errorMessage;
+        }
+        
+        if (error.response.status === 401) {
+          errorMessage = 'Your session has expired. Please log in again.';
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setTimeout(() => {
+            window.location.href = '/auth';
+          }, 1500);
+        }
+        
         throw { 
           message: errorMessage,
           status: error.response.status,

@@ -62,12 +62,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const currentUser = AuthService.getCurrentUserFromStorage();
-    if (currentUser) {
-      setUser(currentUser);
-    }
-    setLoading(false);
+    const verifySession = async () => {
+      const currentUser = AuthService.getCurrentUserFromStorage();
+      if (currentUser) {
+        setUser(currentUser);
+        try {
+          const verifiedUser = await AuthService.getCurrentUser();
+          if (!verifiedUser) {
+            // Token is expired or invalid on the backend
+            AuthService.logout();
+            setUser(null);
+          } else {
+            setUser(verifiedUser as User);
+          }
+        } catch (error) {
+          console.error("Session verification failed:", error);
+        }
+      }
+      setLoading(false);
+    };
+
+    verifySession();
   }, []);
 
   const login = async (email: string, password: string) => {

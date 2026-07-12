@@ -124,7 +124,30 @@ class ExamService {
       return { success: true };
     } catch (error) {
       console.error('Error downloading SEB config:', error);
-      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to download SEB configuration';
+      
+      let errorMessage = 'Failed to download SEB configuration';
+      
+      if (error?.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          console.error('Error parsing blob error response:', e);
+        }
+      } else {
+        errorMessage = error?.response?.data?.error || error?.response?.data?.message || error.message || errorMessage;
+      }
+      
+      if (error?.response?.status === 401) {
+        errorMessage = 'Your session has expired. Please log in again.';
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => {
+          window.location.href = '/auth';
+        }, 1500);
+      }
+      
       return { success: false, message: errorMessage };
     }
   }
