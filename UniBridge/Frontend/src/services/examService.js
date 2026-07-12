@@ -100,13 +100,18 @@ class ExamService {
   async downloadSEBConfig(examId) {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        return { success: false, message: 'You must be signed in to download the SEB configuration.' };
+      }
+
       const response = await axios.get(`${API_URL}/${examId}/seb-config`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob',
+        withCredentials: true,
       });
 
-      // Create a temporary <a> tag to trigger the file download
-      const blob = new Blob([response.data], { type: 'application/octet-stream' });
+      const contentType = response.headers?.['content-type'] || response.headers?.['Content-Type'] || 'application/octet-stream';
+      const blob = new Blob([response.data], { type: contentType });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -119,7 +124,8 @@ class ExamService {
       return { success: true };
     } catch (error) {
       console.error('Error downloading SEB config:', error);
-      return { success: false, message: 'Failed to download SEB configuration' };
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to download SEB configuration';
+      return { success: false, message: errorMessage };
     }
   }
 

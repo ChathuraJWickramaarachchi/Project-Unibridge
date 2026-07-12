@@ -397,7 +397,10 @@ const SecureExamPage = () => {
           <button
             onClick={() => {
               // Use full-page navigation (not React Router) so SEB detects the quitURL
-              window.location.href = "/secure-exam-completed";
+              const targetUrl = examId
+                ? `/secure-exam-completed?examId=${encodeURIComponent(examId)}`
+                : "/secure-exam-completed";
+              window.location.href = targetUrl;
             }}
             className="w-full py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-all"
           >

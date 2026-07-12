@@ -1,22 +1,36 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ShieldCheck, XSquare, Loader2 } from "lucide-react";
 
 const SecureExamCompleted = () => {
   const [closing, setClosing] = useState(false);
+  const [searchParams] = useSearchParams();
+  const examId = searchParams.get("examId");
 
   const handleClose = () => {
     if (closing) return;
     setClosing(true);
+
+    const redirectToDownloadPage = () => {
+      const targetRoute = examId ? `/download-seb/${examId}` : "/download-seb";
+      window.location.assign(targetRoute);
+    };
 
     // Strategy 1: Try SEB JavaScript API (SEB 2.x / 3.x)
     try {
       const win = window as any;
       if (typeof win.SEB?.quit === "function") {
         win.SEB.quit();
+        setTimeout(() => {
+          redirectToDownloadPage();
+        }, 1000);
         return;
       }
       if (typeof win.SafeExamBrowser?.security?.quit === "function") {
         win.SafeExamBrowser.security.quit();
+        setTimeout(() => {
+          redirectToDownloadPage();
+        }, 1000);
         return;
       }
     } catch {
@@ -40,11 +54,15 @@ const SecureExamCompleted = () => {
           } catch {
             // Protocol not supported — user must close manually
           }
-          setClosing(false);
+          setTimeout(() => {
+            redirectToDownloadPage();
+            setClosing(false);
+          }, 1000);
         }, 1000);
       }, 1500);
     } catch {
       window.close();
+      redirectToDownloadPage();
       setClosing(false);
     }
   };

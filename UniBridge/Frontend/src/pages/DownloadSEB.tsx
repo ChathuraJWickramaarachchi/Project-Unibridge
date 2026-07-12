@@ -26,7 +26,7 @@ const DownloadSEB = () => {
         return true;
       }
 
-      toast.error("Failed to download SEB configuration");
+      toast.error(response.message || "Failed to download SEB configuration");
       return false;
     } catch (error) {
       console.error("Error downloading SEB config:", error);

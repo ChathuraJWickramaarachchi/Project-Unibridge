@@ -37,7 +37,8 @@ const SecureExamLayout = ({ children }: SecureExamLayoutProps) => {
     const isAllowed =
       path.startsWith("/secure-exam") ||
       path.startsWith("/secure-exam-login") ||
-      path === "/secure-exam-completed";
+      path === "/secure-exam-completed" ||
+      path.startsWith("/download-seb");
 
     if (!isAllowed) {
       navigate(-1); // go back to previous allowed page
