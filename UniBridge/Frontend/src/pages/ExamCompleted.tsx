@@ -6,6 +6,15 @@ const ExamCompleted = () => {
   const navigate = useNavigate();
 
   const handleClose = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isLockdown = urlParams.get("lockdown") === "true" || navigator.userAgent.includes("SEB");
+
+    if (isLockdown) {
+      // Navigate to the exact quitURL configured in SEB to close it
+      window.location.href = `${window.location.origin}/secure-exam-completed`;
+      return;
+    }
+
     window.close();
     setTimeout(() => {
       // In case window.close() is blocked, navigate to a neutral page.

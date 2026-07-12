@@ -5,7 +5,7 @@ import { ShieldCheck, XSquare, Loader2 } from "lucide-react";
 const SecureExamCompleted = () => {
   const [closing, setClosing] = useState(false);
   const [searchParams] = useSearchParams();
-  const examId = searchParams.get("examId");
+  const examId = searchParams.get("examId") || sessionStorage.getItem("completedExamId");
 
   const handleClose = () => {
     if (closing) return;
@@ -37,11 +37,10 @@ const SecureExamCompleted = () => {
       // SEB API not available, continue to fallback
     }
 
-    // Strategy 2: Force a full-page navigation to the current URL (which is the quitURL).
-    // SEB detects quitURL via real HTTP navigation, not React Router's
-    // client-side History API changes. A hard reload triggers SEB's URL match.
+    // Strategy 2: Force a full-page navigation to the exact quitURL (without query parameters).
+    // SEB detects quitURL via real HTTP navigation. An exact match triggers SEB's quit handler.
     try {
-      window.location.href = window.location.href;
+      window.location.href = `${window.location.origin}/secure-exam-completed`;
       // Give SEB a moment to react before trying further fallbacks
       setTimeout(() => {
         // Strategy 3: Try window.close() — works if SEB config allows it

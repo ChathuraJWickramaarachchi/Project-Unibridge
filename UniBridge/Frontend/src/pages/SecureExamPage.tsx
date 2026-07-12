@@ -200,7 +200,7 @@ const SecureExamPage = () => {
     ).length;
   };
 
-  const startExam = async () => {
+  const startExam = useCallback(async () => {
     if (!examId || !examData) {
       toast.error("Exam data is not ready.");
       return;
@@ -239,7 +239,14 @@ const SecureExamPage = () => {
       setStartingExam(false);
       setLoading(false);
     }
-  };
+  }, [examId, examData]);
+
+  // Start the exam automatically when exam data is ready
+  useEffect(() => {
+    if (examData && !examStarted && !startingExam) {
+      startExam();
+    }
+  }, [examData, examStarted, startingExam, startExam]);
 
   // Auto-submit when exam completes (time runs out or user clicks submit)
   useEffect(() => {
@@ -396,11 +403,13 @@ const SecureExamPage = () => {
 
           <button
             onClick={() => {
-              // Use full-page navigation (not React Router) so SEB detects the quitURL
-              const targetUrl = examId
-                ? `/secure-exam-completed?examId=${encodeURIComponent(examId)}`
-                : "/secure-exam-completed";
-              window.location.href = targetUrl;
+              // Save examId in sessionStorage before redirecting so the completed page can access it
+              if (examId) {
+                sessionStorage.setItem("completedExamId", examId);
+              }
+              // Use full-page navigation (not React Router) to the exact quitURL.
+              // SEB detects the quitURL via real HTTP navigation and requires an exact match (without query parameters).
+              window.location.href = `${window.location.origin}/secure-exam-completed`;
             }}
             className="w-full py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-all"
           >

@@ -43,9 +43,9 @@ const DownloadSEB = () => {
     const downloaded = await downloadSEBConfig();
     if (downloaded) {
       toast.success(
-        "Exam config downloaded. Opening the secure exam login..."
+        "Exam configuration downloaded! Please open the downloaded file to launch the Safe Exam Browser.",
+        { duration: 8000 }
       );
-      navigate(`/secure-exam-login/${examId}?lockdown=true`, { replace: true });
     }
   };
 
